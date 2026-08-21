@@ -1,0 +1,6 @@
+{
+  "name": "Ingenium Tech Academy",
+  "description": "Premium mobile-first learning management application and administrative operations center for ingeniumtechacademy.com.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

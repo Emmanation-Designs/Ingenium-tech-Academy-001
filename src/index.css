@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .dot-grid {
+    background-color: #09090b;
+    background-image: radial-gradient(#27272a 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .bento-card {
+    background-color: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 24px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .bento-card:hover {
+    border-color: #3f3f46;
+  }
+}
