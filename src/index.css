@@ -18,3 +18,90 @@
     border-color: #3f3f46;
   }
 }
+
+/* High-contrast Sophisticated Light Theme Overrides */
+.light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.light .dot-grid {
+  background-color: #f8fafc !important;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px) !important;
+}
+
+.light .bento-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light .bento-card:hover {
+  border-color: #cbd5e1 !important;
+}
+
+/* Background mappings */
+.light .bg-zinc-950,
+.light .bg-zinc-950\/90 {
+  background-color: #f8fafc !important;
+}
+
+.light .bg-zinc-900,
+.light .bg-zinc-900\/90,
+.light header {
+  background-color: #ffffff !important;
+}
+
+.light .bg-zinc-800,
+.light .bg-zinc-850,
+.light aside {
+  background-color: #f1f5f9 !important;
+}
+
+/* Border mappings */
+.light .border-zinc-800,
+.light .border-zinc-850,
+.light .border-zinc-900 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Text mappings */
+.light .text-white,
+.light .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+.light .text-zinc-300,
+.light .text-zinc-400 {
+  color: #334155 !important;
+}
+
+.light .text-zinc-500 {
+  color: #64748b !important;
+}
+
+/* Interactive form inputs */
+.light input,
+.light select,
+.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Table styling for dark mode variables to light mode counterparts */
+.light table tr.bg-zinc-950 {
+  background-color: #e2e8f0 !important;
+}
+
+.light table tr {
+  border-color: #e2e8f0 !important;
+}
+
+.light tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+

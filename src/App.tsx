@@ -12,6 +12,24 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
   const [loading, setLoading] = useState<boolean>(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('ingenium_theme') as 'light' | 'dark') || 'dark';
+  });
+
+  // Apply theme class on root element
+  useEffect(() => {
+    localStorage.setItem('ingenium_theme', theme);
+    const root = window.document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light');
+    } else {
+      root.classList.remove('light');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Initialize session and onboarding preference
   useEffect(() => {
@@ -96,12 +114,16 @@ export default function App() {
         <AdminApp 
           currentUser={currentUser} 
           onLogout={handleLogout} 
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       ) : (
         <StudentApp 
           currentUser={currentUser} 
           onLogout={handleLogout}
           onProfileUpdate={handleProfileUpdate}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
       

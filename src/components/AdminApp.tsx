@@ -7,17 +7,19 @@ import {
 import { 
   LayoutDashboard, BookOpen, Clock, Users, Inbox, GraduationCap, 
   UserSquare, CreditCard, Settings, LogOut, CheckCircle2, 
-  AlertCircle, ShieldAlert, Plus, Layers, User, Trash2, Calendar, Edit, Eye, EyeOff
+  AlertCircle, ShieldAlert, Plus, Layers, User, Trash2, Calendar, Edit, Eye, EyeOff, Sun, Moon
 } from 'lucide-react';
 
 interface AdminAppProps {
   currentUser: Profile;
   onLogout: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 type AdminTab = 'dashboard' | 'courses' | 'times' | 'students' | 'requests' | 'enrollments' | 'teachers' | 'payments' | 'settings';
 
-export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => {
+export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme, onToggleTheme }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   
   // Real database states
@@ -34,6 +36,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
 
   // Categories management state
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryFile, setNewCategoryFile] = useState<File | null>(null);
+  const [newCategoryPreview, setNewCategoryPreview] = useState<string>('');
 
   // Course editing state
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -45,9 +49,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
     duration: '8 weeks',
     training_mode: 'online' as any,
     status: 'published' as any,
-    international_price: 150,
-    nigeria_price: 120000,
-    uk_price: 120
+    image_url: '',
+    usd_price: 150,
+    ngn_price: 120000,
+    eur_price: 120
   });
 
   // Administrative creation forms (to enable manual testing and real populating)
@@ -59,10 +64,16 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
     duration: '8 weeks',
     training_mode: 'online' as any,
     status: 'published' as any,
-    international_price: 150,
-    nigeria_price: 120000,
-    uk_price: 120
+    usd_price: 150,
+    ngn_price: 120000,
+    eur_price: 120
   });
+
+  // Hero Image storage helper states
+  const [createHeroFile, setCreateHeroFile] = useState<File | null>(null);
+  const [createHeroPreview, setCreateHeroPreview] = useState<string>('');
+  const [editHeroFile, setEditHeroFile] = useState<File | null>(null);
+  const [editHeroPreview, setEditHeroPreview] = useState<string>('');
   
   const [newSchedule, setNewSchedule] = useState({
     course_id: '',
@@ -119,15 +130,53 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
     if (!newCategoryName.trim()) return;
     try {
       const slug = newCategoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
-      await dataService.categories.createCategory({
+      const cat = await dataService.categories.createCategory({
         name: newCategoryName.trim(),
         slug,
         is_active: true
       });
+
+      if (newCategoryFile) {
+        const imageUrl = await dataService.categories.uploadCategoryImage(cat.id, newCategoryFile);
+        await dataService.categories.updateCategory(cat.id, { image_url: imageUrl });
+      }
+
       setNewCategoryName('');
+      setNewCategoryFile(null);
+      setNewCategoryPreview('');
       loadAdminData();
     } catch (e: any) {
       alert("Error: " + e.message);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, mode: 'create' | 'edit') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image file size must be less than 5MB");
+      return;
+    }
+    
+    const previewUrl = URL.createObjectURL(file);
+    if (mode === 'create') {
+      setCreateHeroFile(file);
+      setCreateHeroPreview(previewUrl);
+    } else {
+      setEditHeroFile(file);
+      setEditHeroPreview(previewUrl);
+    }
+  };
+
+  const handleRemoveImage = (mode: 'create' | 'edit') => {
+    if (mode === 'create') {
+      setCreateHeroFile(null);
+      setCreateHeroPreview('');
+    } else {
+      setEditHeroFile(null);
+      setEditHeroPreview('');
+      setEditForm(prev => ({ ...prev, image_url: '' }));
     }
   };
 
@@ -151,15 +200,20 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
         created_by: currentUser.id
       });
 
-      // 2. Set pricing row
+      let finalImageUrl = '';
+      if (createHeroFile) {
+        // 2. Upload Hero Image to Supabase Storage if file exists
+        finalImageUrl = await dataService.courses.uploadHeroImage(createdCourse.id, createHeroFile);
+        // Update the course with the uploaded image URL
+        await dataService.courses.updateCourse(createdCourse.id, { image_url: finalImageUrl });
+      }
+
+      // 3. Set pricing row
       await dataService.pricing.updatePricing({
         course_id: createdCourse.id,
-        international_price: Number(newCourse.international_price || 0),
-        nigeria_price: Number(newCourse.nigeria_price || 0),
-        uk_price: Number(newCourse.uk_price || 0),
-        international_currency: 'USD',
-        nigeria_currency: 'NGN',
-        uk_currency: 'GBP'
+        usd_price: Number(newCourse.usd_price || 0),
+        ngn_price: Number(newCourse.ngn_price || 0),
+        eur_price: Number(newCourse.eur_price || 0)
       });
 
       setNewCourse({
@@ -170,10 +224,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
         duration: '8 weeks',
         training_mode: 'online',
         status: 'published',
-        international_price: 150,
-        nigeria_price: 120000,
-        uk_price: 120
+        usd_price: 150,
+        ngn_price: 120000,
+        eur_price: 120
       });
+      setCreateHeroFile(null);
+      setCreateHeroPreview('');
       loadAdminData();
     } catch (e: any) {
       alert("Error creating course: " + e.message);
@@ -190,10 +246,13 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
       duration: course.duration || '8 weeks',
       training_mode: course.training_mode,
       status: course.status,
-      international_price: course.pricing?.international_price || 0,
-      nigeria_price: course.pricing?.nigeria_price || 0,
-      uk_price: course.pricing?.uk_price || 0
+      image_url: course.image_url || '',
+      usd_price: course.pricing?.usd_price || 0,
+      ngn_price: course.pricing?.ngn_price || 0,
+      eur_price: course.pricing?.eur_price || 0
     });
+    setEditHeroFile(null);
+    setEditHeroPreview(course.image_url || '');
   };
 
   const handleUpdateCourseSubmit = async (e: React.FormEvent) => {
@@ -202,6 +261,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
     try {
       const slug = editForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
       
+      let finalImageUrl = editForm.image_url;
+      if (editHeroFile) {
+        finalImageUrl = await dataService.courses.uploadHeroImage(editingCourse.id, editHeroFile);
+      } else if (!editForm.image_url && editingCourse.image_url) {
+        await dataService.courses.removeHeroImage(editingCourse.id);
+        finalImageUrl = '';
+      }
+
       // 1. Update Base Course
       await dataService.courses.updateCourse(editingCourse.id, {
         title: editForm.title.trim(),
@@ -212,21 +279,21 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
         duration: editForm.duration,
         training_mode: editForm.training_mode,
         status: editForm.status,
+        image_url: finalImageUrl,
         is_published: editForm.status === 'published'
       });
 
       // 2. Update Pricing Row
       await dataService.pricing.updatePricing({
         course_id: editingCourse.id,
-        international_price: Number(editForm.international_price || 0),
-        nigeria_price: Number(editForm.nigeria_price || 0),
-        uk_price: Number(editForm.uk_price || 0),
-        international_currency: 'USD',
-        nigeria_currency: 'NGN',
-        uk_currency: 'GBP'
+        usd_price: Number(editForm.usd_price || 0),
+        ngn_price: Number(editForm.ngn_price || 0),
+        eur_price: Number(editForm.eur_price || 0)
       });
 
       setEditingCourse(null);
+      setEditHeroFile(null);
+      setEditHeroPreview('');
       loadAdminData();
     } catch (e: any) {
       alert("Error updating course: " + e.message);
@@ -418,9 +485,24 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
               Ingenium Tech Academy Management Console — Live Database Sync
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl shadow-md">
-            <span className="w-2 h-2 rounded-full bg-[#00B074]"></span>
-            <span className="text-zinc-300">Database Connected</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-zinc-800 flex items-center justify-center bg-zinc-900 shadow-md"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4 text-zinc-700" />
+              ) : (
+                <Sun className="w-4 h-4 text-white" />
+              )}
+            </button>
+
+            <div className="flex items-center gap-2 text-xs font-semibold bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl shadow-md">
+              <span className="w-2 h-2 rounded-full bg-[#00B074]"></span>
+              <span className="text-zinc-300">Database Connected</span>
+            </div>
           </div>
         </div>
 
@@ -531,25 +613,68 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
             {/* Manage Categories Section */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-md">
               <h4 className="font-extrabold text-xs uppercase text-zinc-400 tracking-wider mb-3">Manage Course Categories</h4>
-              <form onSubmit={handleCreateCategory} className="flex gap-2 text-xs">
-                <input
-                  type="text"
-                  placeholder="Create new category (e.g. Frontend Development, Data Analytics...)"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="flex-1 p-2.5 bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-[#00B074] font-semibold"
-                />
-                <button 
-                  type="submit" 
-                  className="py-2.5 px-5 bg-[#00B074] hover:bg-[#00905D] text-white font-extrabold rounded-xl transition-all cursor-pointer shrink-0 border border-zinc-850"
-                >
-                  Create Category
-                </button>
+              <form onSubmit={handleCreateCategory} className="space-y-3 text-xs">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-[10px] uppercase font-extrabold text-zinc-400">Category Name</label>
+                    <input
+                      type="text"
+                      placeholder="E.g. Frontend Development, Data Analytics, Cybersecurity..."
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="w-full p-2.5 bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-[#00B074] font-semibold"
+                    />
+                  </div>
+                  <div className="w-full sm:w-64 space-y-1">
+                    <label className="block text-[10px] uppercase font-extrabold text-zinc-400">Category Image (Optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setNewCategoryFile(file);
+                          setNewCategoryPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="w-full p-1.5 bg-zinc-950 border border-zinc-800 text-zinc-400 rounded-xl focus:outline-none focus:border-[#00B074] font-semibold file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-black file:bg-zinc-800 file:text-white file:cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {newCategoryPreview && (
+                  <div className="relative w-28 aspect-video rounded-lg overflow-hidden bg-zinc-950 border border-zinc-800">
+                    <img src={newCategoryPreview} alt="Category preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCategoryFile(null);
+                        setNewCategoryPreview('');
+                      }}
+                      className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 hover:bg-black/80 text-white"
+                    >
+                      <span className="text-[9px] px-1 font-bold">X</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-1">
+                  <button 
+                    type="submit" 
+                    className="py-2.5 px-5 bg-[#00B074] hover:bg-[#00905D] text-white font-extrabold rounded-xl transition-all cursor-pointer border border-zinc-850"
+                  >
+                    Create Category
+                  </button>
+                </div>
               </form>
+              
               {categories.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-4">
                   {categories.map(cat => (
-                    <span key={cat.id} className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-400">
+                    <span key={cat.id} className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-400 flex items-center gap-1.5">
+                      {cat.image_url && (
+                        <img src={cat.image_url} alt="" className="w-4 h-4 rounded-full object-cover" referrerPolicy="no-referrer" />
+                      )}
                       {cat.name}
                     </span>
                   ))}
@@ -575,11 +700,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                       const courseCat = categories.find(c => c.id === course.category_id);
                       return (
                         <div key={course.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md hover:border-zinc-700 transition-all">
+                          <div className="w-16 h-12 rounded-xl bg-zinc-950 border border-zinc-850 overflow-hidden shrink-0 hidden sm:flex items-center justify-center">
+                            {course.image_url ? (
+                              <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-[10px] font-black text-zinc-600 tracking-wider">ITA</span>
+                            )}
+                          </div>
                           <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-2">
                               <h4 className="font-extrabold text-sm text-white">{course.title}</h4>
                               {courseCat && (
-                                <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-zinc-950 text-zinc-400 border border-zinc-850">
+                                <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-zinc-950 text-[#00B074] border border-zinc-850">
                                   {courseCat.name}
                                 </span>
                               )}
@@ -591,11 +723,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                               <span className="bg-zinc-950 px-2 py-0.5 rounded border border-zinc-850 uppercase">{course.training_mode}</span>
                               <span className="bg-zinc-950 px-2 py-0.5 rounded border border-zinc-850">{course.duration}</span>
                               <div className="flex items-center gap-1.5 bg-zinc-950/60 px-2.5 py-0.5 rounded-full border border-zinc-850">
-                                <span className="text-emerald-400 font-bold">NGN ₦{Number(course.pricing?.nigeria_price || 120000).toLocaleString()}</span>
+                                <span className="text-emerald-400 font-bold">NGN ₦{Number(course.pricing?.ngn_price ?? 120000).toLocaleString()}</span>
                                 <span className="text-zinc-500">•</span>
-                                <span className="text-indigo-400 font-bold">GBP £{Number(course.pricing?.uk_price || 120).toLocaleString()}</span>
+                                <span className="text-indigo-400 font-bold">EUR €{Number(course.pricing?.eur_price ?? 120).toLocaleString()}</span>
                                 <span className="text-zinc-500">•</span>
-                                <span className="text-amber-400 font-bold">USD ${Number(course.pricing?.international_price || 150).toLocaleString()}</span>
+                                <span className="text-amber-400 font-bold">USD ${Number(course.pricing?.usd_price ?? 150).toLocaleString()}</span>
                               </div>
                             </div>
                           </div>
@@ -626,7 +758,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                   </div>
                 )}
               </div>
-
+              
               {/* Right col: Edit or Create course form */}
               <div className="space-y-4">
                 {editingCourse ? (
@@ -672,38 +804,79 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                         </select>
                       </div>
 
+                      {/* Course Hero Image Upload/Preview */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] uppercase font-extrabold text-zinc-400">Course Hero Image</label>
+                        {editHeroPreview ? (
+                          <div className="relative group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-video flex items-center justify-center">
+                            <img src={editHeroPreview} alt="Course Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                              <label className="py-1 px-2.5 bg-white text-black font-black text-[9px] uppercase rounded cursor-pointer hover:bg-zinc-100">
+                                Replace
+                                <input 
+                                  type="file" 
+                                  accept="image/png, image/jpeg, image/jpg, image/webp" 
+                                  className="hidden" 
+                                  onChange={(e) => handleImageChange(e, 'edit')} 
+                                />
+                              </label>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveImage('edit')} 
+                                className="py-1 px-2.5 bg-red-600 text-white font-black text-[9px] uppercase rounded hover:bg-red-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border border-dashed border-zinc-800 rounded-xl p-4 text-center hover:border-zinc-700 transition-all bg-zinc-950/40 relative">
+                            <input 
+                              type="file" 
+                              accept="image/png, image/jpeg, image/jpg, image/webp" 
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                              onChange={(e) => handleImageChange(e, 'edit')} 
+                            />
+                            <div className="text-zinc-500 font-bold space-y-1">
+                              <div className="text-xs text-[#00B074]">Click to upload hero image</div>
+                              <div className="text-[9px] uppercase">JPG, PNG, WEBP up to 5MB</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* 3-Tier Prices */}
                       <div className="space-y-2 border-t border-zinc-800 pt-2.5">
                         <p className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider">3-Tier Fixed Pricing</p>
                         
                         <div className="grid grid-cols-3 gap-1.5">
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">NGR Price (₦)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">NGN Price (₦)</label>
                             <input
                               type="number"
                               required
-                              value={editForm.nigeria_price}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, nigeria_price: Number(e.target.value) }))}
+                              value={editForm.ngn_price}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, ngn_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">UK Price (£)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">EUR Price (€)</label>
                             <input
                               type="number"
                               required
-                              value={editForm.uk_price}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, uk_price: Number(e.target.value) }))}
+                              value={editForm.eur_price}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, eur_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">Int'l Price ($)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">USD Price ($)</label>
                             <input
                               type="number"
                               required
-                              value={editForm.international_price}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, international_price: Number(e.target.value) }))}
+                              value={editForm.usd_price}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, usd_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
@@ -748,7 +921,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
 
                       <button
                         type="submit"
-                        className="w-full py-2.5 rounded-xl bg-white text-black font-extrabold border border-zinc-800 shadow-md cursor-pointer mt-2"
+                        className="w-full py-2.5 rounded-xl bg-white text-black font-extrabold border border-zinc-800 shadow-md cursor-pointer mt-2 animate-pulse"
                       >
                         Save Changes
                       </button>
@@ -794,38 +967,79 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                         </select>
                       </div>
 
+                      {/* Course Hero Image Upload/Preview */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] uppercase font-extrabold text-zinc-400">Course Hero Image</label>
+                        {createHeroPreview ? (
+                          <div className="relative group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-video flex items-center justify-center">
+                            <img src={createHeroPreview} alt="Course Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                              <label className="py-1 px-2.5 bg-white text-black font-black text-[9px] uppercase rounded cursor-pointer hover:bg-zinc-100">
+                                Replace
+                                <input 
+                                  type="file" 
+                                  accept="image/png, image/jpeg, image/jpg, image/webp" 
+                                  className="hidden" 
+                                  onChange={(e) => handleImageChange(e, 'create')} 
+                                />
+                              </label>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveImage('create')} 
+                                className="py-1 px-2.5 bg-red-600 text-white font-black text-[9px] uppercase rounded hover:bg-red-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border border-dashed border-zinc-800 rounded-xl p-4 text-center hover:border-zinc-700 transition-all bg-zinc-950/40 relative">
+                            <input 
+                              type="file" 
+                              accept="image/png, image/jpeg, image/jpg, image/webp" 
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                              onChange={(e) => handleImageChange(e, 'create')} 
+                            />
+                            <div className="text-zinc-500 font-bold space-y-1">
+                              <div className="text-xs text-[#00B074]">Click to upload hero image</div>
+                              <div className="text-[9px] uppercase">JPG, PNG, WEBP up to 5MB</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* 3-Tier Prices */}
                       <div className="space-y-2 border-t border-zinc-800 pt-2.5">
                         <p className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider">3-Tier Fixed Pricing</p>
                         
                         <div className="grid grid-cols-3 gap-1.5">
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">NGR Price (₦)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">NGN Price (₦)</label>
                             <input
                               type="number"
                               required
-                              value={newCourse.nigeria_price}
-                              onChange={(e) => setNewCourse(prev => ({ ...prev, nigeria_price: Number(e.target.value) }))}
+                              value={newCourse.ngn_price}
+                              onChange={(e) => setNewCourse(prev => ({ ...prev, ngn_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">UK Price (£)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">EUR Price (€)</label>
                             <input
                               type="number"
                               required
-                              value={newCourse.uk_price}
-                              onChange={(e) => setNewCourse(prev => ({ ...prev, uk_price: Number(e.target.value) }))}
+                              value={newCourse.eur_price}
+                              onChange={(e) => setNewCourse(prev => ({ ...prev, eur_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
                           <div>
-                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">Int'l Price ($)</label>
+                            <label className="block text-[9px] font-bold text-zinc-500 mb-0.5">USD Price ($)</label>
                             <input
                               type="number"
                               required
-                              value={newCourse.international_price}
-                              onChange={(e) => setNewCourse(prev => ({ ...prev, international_price: Number(e.target.value) }))}
+                              value={newCourse.usd_price}
+                              onChange={(e) => setNewCourse(prev => ({ ...prev, usd_price: Number(e.target.value) }))}
                               className="w-full p-2 bg-zinc-950 border border-zinc-800 text-white rounded font-bold text-center"
                             />
                           </div>
@@ -878,7 +1092,6 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout }) => 
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         )}

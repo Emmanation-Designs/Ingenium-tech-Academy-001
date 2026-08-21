@@ -22,6 +22,7 @@ export interface CourseCategory {
   name: string;
   slug: string;
   is_active: boolean;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -29,12 +30,9 @@ export interface CourseCategory {
 export interface CoursePricing {
   id: string;
   course_id: string;
-  international_price: number;
-  nigeria_price: number;
-  uk_price: number;
-  international_currency: string;
-  nigeria_currency: string;
-  uk_currency: string;
+  usd_price: number;
+  ngn_price: number;
+  eur_price: number;
   created_at: string;
   updated_at: string;
 }

@@ -371,6 +371,28 @@ export const dataService = {
         setLocalData('categories', categories);
         return updated;
       }
+    },
+
+    async uploadCategoryImage(categoryId: string, file: File): Promise<string> {
+      if (isSupabaseConfigured && supabase) {
+        const filePath = `categories/${categoryId}/hero`;
+        const { error } = await supabase.storage
+          .from('course-images')
+          .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type
+          });
+        
+        if (error) throw new Error(error.message);
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('course-images')
+          .getPublicUrl(filePath);
+          
+        return publicUrl;
+      } else {
+        return URL.createObjectURL(file);
+      }
     }
   },
 
@@ -524,6 +546,40 @@ export const dataService = {
         courses[index] = updated;
         setLocalData('courses', courses);
         return updated;
+      }
+    },
+
+    async uploadHeroImage(courseId: string, file: File): Promise<string> {
+      if (isSupabaseConfigured && supabase) {
+        const filePath = `${courseId}/hero`;
+        const { error } = await supabase.storage
+          .from('course-images')
+          .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type
+          });
+        
+        if (error) throw new Error(error.message);
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('course-images')
+          .getPublicUrl(filePath);
+          
+        return publicUrl;
+      } else {
+        return URL.createObjectURL(file);
+      }
+    },
+
+    async removeHeroImage(courseId: string): Promise<void> {
+      if (isSupabaseConfigured && supabase) {
+        const filePath = `${courseId}/hero`;
+        const { error } = await supabase.storage
+          .from('course-images')
+          .remove([filePath]);
+        if (error) {
+          console.warn('Error removing from storage:', error.message);
+        }
       }
     },
 

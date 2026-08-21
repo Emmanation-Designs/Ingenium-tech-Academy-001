@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification } from '../types';
+import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification, CourseCategory } from '../types';
 import { 
   Home as HomeIcon, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle2, 
-  MapPin, Clock, Phone, AlertCircle, ChevronRight, CheckCircle, Plus, Send 
+  MapPin, Clock, Phone, AlertCircle, ChevronRight, CheckCircle, Plus, Send, Sun, Moon 
 } from 'lucide-react';
 
 interface StudentAppProps {
   currentUser: Profile;
   onLogout: () => void;
   onProfileUpdate: (profile: Profile) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 export const StudentApp: React.FC<StudentAppProps> = ({
   currentUser,
   onLogout,
   onProfileUpdate,
+  theme,
+  onToggleTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<'home' | 'courses' | 'learning' | 'profile'>('home');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -23,18 +27,21 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [schedulesMap, setSchedulesMap] = useState<Record<string, CourseSchedule[]>>({});
+  const [categories, setCategories] = useState<CourseCategory[]>([]);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   
-  // Filter courses by search input
+  // Filter courses by search input and category select
   const filteredCourses = courses.filter(course => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
-    return (
+    const matchesSearch = !query ? true : (
       course.title.toLowerCase().includes(query) ||
       course.short_description?.toLowerCase().includes(query) ||
       course.category?.toLowerCase().includes(query)
     );
+    const matchesCategory = !selectedCategoryId ? true : course.category_id === selectedCategoryId;
+    return matchesSearch && matchesCategory;
   });
 
   // Forms & UI state
@@ -54,6 +61,10 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   const loadStudentData = async () => {
     setLoading(true);
     try {
+      // 0. Fetch active course categories
+      const fetchedCats = await dataService.categories.getCategories();
+      setCategories(fetchedCats.filter(c => c.is_active));
+
       // 1. Fetch available courses
       const fetchedCourses = await dataService.courses.getCourses();
       const published = fetchedCourses.filter(c => c.is_published || c.status === 'published');
@@ -102,23 +113,30 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     const countryUpper = (currentUser.country || '').trim().toUpperCase();
     const pricing = course.pricing;
 
-    if (countryUpper === 'NIGERIA') {
+    const eurozoneCountries = [
+      'AUSTRIA', 'BELGIUM', 'CROATIA', 'CYPRUS', 'ESTONIA', 'FINLAND', 'FRANCE', 'GERMANY', 
+      'GREECE', 'IRELAND', 'ITALY', 'LATVIA', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'NETHERLANDS', 
+      'PORTUGAL', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'ANDORRA', 'MONACO', 'SAN MARINO', 'VATICAN CITY',
+      'MONTENEGRO', 'KOSOVO', 'EUROPE', 'EUROZONE', 'EU'
+    ];
+
+    if (countryUpper === 'NIGERIA' || countryUpper === 'NG') {
       return {
-        price: pricing?.nigeria_price ?? 120000,
+        price: pricing?.ngn_price ?? 120000,
         currency: 'NGN',
         symbol: '₦',
         isDefaultFallback: !pricing
       };
-    } else if (countryUpper === 'UNITED KINGDOM' || countryUpper === 'UK' || countryUpper === 'GB' || countryUpper === 'GREAT BRITAIN') {
+    } else if (eurozoneCountries.includes(countryUpper)) {
       return {
-        price: pricing?.uk_price ?? 120,
-        currency: 'GBP',
-        symbol: '£',
+        price: pricing?.eur_price ?? 120,
+        currency: 'EUR',
+        symbol: '€',
         isDefaultFallback: !pricing
       };
     } else {
       return {
-        price: pricing?.international_price ?? 150,
+        price: pricing?.usd_price ?? 150,
         currency: 'USD',
         symbol: '$',
         isDefaultFallback: !pricing
@@ -201,41 +219,56 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-[#00B074]"></span>
             <span className="font-extrabold text-sm tracking-tight text-white">Ingenium Tech Academy</span>
           </div>
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-              className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all relative cursor-pointer border border-zinc-800"
-              aria-label="View notifications"
+              onClick={onToggleTheme}
+              className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-zinc-800 flex items-center justify-center"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              aria-label="Toggle theme"
             >
-              <Bell className="w-4 h-4 text-white" />
-              {notifications.some(n => !n.is_read) && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00B074]"></span>
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4 text-zinc-700" />
+              ) : (
+                <Sun className="w-4 h-4 text-white" />
               )}
             </button>
 
-            {/* Notification Dropdown Container */}
-            {showNotificationCenter && (
-              <div className="absolute right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-xl w-72 z-50">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
-                  <span className="font-bold text-xs uppercase tracking-wider text-zinc-400">Notifications</span>
-                  <button 
-                    onClick={() => setShowNotificationCenter(false)}
-                    className="text-[10px] font-bold text-[#00B074] hover:underline"
-                  >
-                    Close
-                  </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all relative cursor-pointer border border-zinc-800"
+                aria-label="View notifications"
+              >
+                <Bell className="w-4 h-4 text-white" />
+                {notifications.some(n => !n.is_read) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00B074]"></span>
+                )}
+              </button>
+
+              {/* Notification Dropdown Container */}
+              {showNotificationCenter && (
+                <div className="absolute right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-xl w-72 z-50">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
+                    <span className="font-bold text-xs uppercase tracking-wider text-zinc-400">Notifications</span>
+                    <button 
+                      onClick={() => setShowNotificationCenter(false)}
+                      className="text-[10px] font-bold text-[#00B074] hover:underline"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {notifications.map(n => (
+                      <div key={n.id} className="text-xs">
+                        <p className="font-bold text-white">{n.title}</p>
+                        <p className="text-zinc-400 mt-0.5 leading-relaxed">{n.message}</p>
+                        <span className="text-[9px] text-zinc-500 mt-1 block">Just now</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {notifications.map(n => (
-                    <div key={n.id} className="text-xs">
-                      <p className="font-bold text-white">{n.title}</p>
-                      <p className="text-zinc-400 mt-0.5 leading-relaxed">{n.message}</p>
-                      <span className="text-[9px] text-zinc-500 mt-1 block">Just now</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </header>
 
@@ -354,21 +387,58 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               </div>
 
               {courses.length > 0 && (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search courses by name or key skill..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full p-2.5 pl-3.5 pr-10 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white focus:outline-none focus:border-[#00B074] placeholder-zinc-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase font-black text-zinc-500 hover:text-white"
-                    >
-                      Clear
-                    </button>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search courses by name or key skill..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full p-2.5 pl-3.5 pr-10 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white focus:outline-none focus:border-[#00B074] placeholder-zinc-500"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase font-black text-zinc-500 hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  {categories.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="block text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">Filter by Category</span>
+                      <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+                        <button
+                          onClick={() => setSelectedCategoryId('')}
+                          className={`py-1.5 px-3.5 rounded-full text-xs font-black transition-all shrink-0 cursor-pointer border flex items-center justify-center ${
+                            selectedCategoryId === ''
+                              ? 'bg-[#00B074] text-white border-[#00905D] shadow-sm'
+                              : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                          }`}
+                        >
+                          All Categories
+                        </button>
+                        {categories.map(cat => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategoryId(cat.id)}
+                            className={`py-1.5 px-3.5 rounded-full text-xs font-black transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                              selectedCategoryId === cat.id
+                                ? 'bg-[#00B074] text-white border-[#00905D] shadow-sm'
+                                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                            }`}
+                          >
+                            {cat.image_url && (
+                              <img src={cat.image_url} alt="" className="w-4 h-4 rounded-full object-cover" referrerPolicy="no-referrer" />
+                            )}
+                            <span>{cat.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -404,15 +474,27 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     return (
                       <div key={course.id} className="bento-card p-5 relative space-y-4">
                         
+                        {/* Course Hero Image */}
+                        {course.image_url && (
+                          <div className="w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-900 shadow-inner">
+                            <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                        )}
+
                         {/* Course metadata */}
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-zinc-950 text-zinc-400 border border-zinc-800">
                               {course.training_mode}
                             </span>
                             <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-955/30 text-emerald-400 border border-emerald-900/30">
                               {course.duration || 'Flexible duration'}
                             </span>
+                            {course.category && (
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-950/20 text-indigo-400 border border-indigo-900/30">
+                                {course.category}
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-lg font-black text-white leading-tight mt-1.5">{course.title}</h3>
                           <p className="text-xs text-zinc-400 leading-relaxed">{course.short_description}</p>
