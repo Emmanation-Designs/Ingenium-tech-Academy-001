@@ -5,35 +5,39 @@ interface OnboardingProps {
   onComplete: () => void;
 }
 
+const BookWithDotsIcon = () => (
+  <svg width="110" height="110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    <circle cx="10" cy="11" r="1.2" fill="currentColor" />
+    <circle cx="13" cy="11" r="1.2" fill="currentColor" />
+    <circle cx="16" cy="11" r="1.2" fill="currentColor" />
+  </svg>
+);
+
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps = [
     {
       title: "Start learning today",
-      description: "Acquire high-demand practical skills and build your career foundation with training designed by technology experts.",
-      icon: <GraduationCap className="w-16 h-16 text-[#00B074]" />,
+      description: "Nowadays e-learning is best for learning for everyone. So you can sign up for learning our lesson. Our all lesson is best.",
+      icon: <BookWithDotsIcon />,
     },
     {
-      title: "Practical Courses & Career Impact",
-      description: "Our curriculums are tailored directly to the demands of the modern workplace, enabling immediate career transition and impact.",
-      icon: <BookOpen className="w-16 h-16 text-[#00B074]" />,
+      title: "Select your course",
+      description: "Explore highly-coveted technological domains designed by global experts to launch your career.",
+      icon: <BookOpen className="w-20 h-20 text-white" />,
     },
     {
-      title: "The Learning Experience",
-      description: "Select from our specialized list of courses, choose your preferred available class times, and interact directly with professional instructors in live virtual sessions.",
-      features: [
-        "Select industry-standard courses",
-        "Flexible daily/weekly class schedules",
-        "Expert instructors & live interactive classes",
-        "Dedicated student community support"
-      ],
-      icon: <Clock className="w-16 h-16 text-[#00B074]" />,
+      title: "Flexible Schedules",
+      description: "Coordinate interactive training times and live sessions synced seamlessly to your native timezone.",
+      icon: <Clock className="w-20 h-20 text-white" />,
     },
     {
-      title: "Your Educational Journey",
-      description: "Empower yourself with professional certifications, audit trials, modules, and lessons tailored to your timezone and schedule. Let's begin building.",
-      icon: <CheckCircle2 className="w-16 h-16 text-[#00B074]" />,
+      title: "Your Academic Journey",
+      description: "Directly connect with professional course instructors, build your selections, and secure accredited records.",
+      icon: <GraduationCap className="w-20 h-20 text-white" />,
     }
   ];
 
@@ -54,60 +58,54 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const activeStep = steps[currentStep];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen dot-grid text-white px-6 py-12 select-none font-sans">
-      {/* Mobile App Container Frame (Virtual Device style, centered on larger screens) */}
-      <div className="w-full max-w-[420px] bg-zinc-900 border border-zinc-800 flex flex-col justify-between min-h-[700px] rounded-[32px] p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 px-6 py-12 select-none font-sans">
+      {/* Mobile App Container Frame (Virtual Device style, matching the mockup) */}
+      <div className="w-full max-w-[400px] bg-[#00B074] border border-emerald-500/20 flex flex-col justify-between min-h-[720px] rounded-[36px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
         
-        {/* Header Branding */}
-        <div className="flex flex-col items-center mt-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#00B074] animate-pulse"></span>
-            <span className="text-xs uppercase font-bold tracking-[0.2em] text-zinc-400">Ingenium Tech Academy</span>
+        {/* Mockup Status Bar */}
+        <div className="flex justify-between items-center text-white/80 px-2 text-[11px] font-bold">
+          <span>10:16</span>
+          <div className="flex items-center gap-1.5">
+            {/* Cellular, WiFi, Battery bars */}
+            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.64 10.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+            </svg>
+            <span className="w-5 h-2.5 border border-white/80 rounded-sm p-0.5 flex items-center">
+              <span className="bg-white h-full w-4/5 block rounded-2xs"></span>
+            </span>
           </div>
         </div>
 
         {/* Dynamic Step Content */}
         <div className="flex-1 flex flex-col justify-center my-8 text-center px-2">
-          {/* Centered Graphic Area */}
-          <div className="flex justify-center mb-8 transform hover:scale-105 transition-transform duration-300">
-            <div className="w-28 h-28 bg-zinc-950 border border-zinc-800 rounded-3xl flex items-center justify-center shadow-lg">
+          {/* Centered Book Icon */}
+          <div className="flex justify-center mb-10 transform hover:scale-105 transition-transform duration-300">
+            <div className="w-32 h-32 flex items-center justify-center">
               {activeStep.icon}
             </div>
           </div>
 
           {/* Heading */}
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white leading-tight tracking-tight mb-4 min-h-[72px] flex items-center justify-center">
+          <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tight mb-4 min-h-[80px] flex items-center justify-center px-4">
             {activeStep.title}
           </h2>
 
           {/* Description */}
-          <p className="text-sm text-zinc-400 leading-relaxed max-w-[320px] mx-auto mb-6">
+          <p className="text-white/85 text-xs font-medium leading-relaxed max-w-[290px] mx-auto mb-6">
             {activeStep.description}
           </p>
-
-          {/* Special list features on Step 3 */}
-          {activeStep.features && (
-            <div className="space-y-2 max-w-[280px] mx-auto text-left mt-2 bg-zinc-950 p-4 border border-zinc-800 rounded-2xl">
-              {activeStep.features.map((feat, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00B074]"></span>
-                  <span>{feat}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Footer Navigation & Indicators */}
-        <div className="mt-auto flex flex-col gap-6">
+        <div className="mt-auto flex flex-col gap-8">
           {/* Slider Indicators */}
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-1.5">
             {steps.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentStep(idx)}
-                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                  currentStep === idx ? 'w-8 bg-[#00B074]' : 'w-2 bg-zinc-800 hover:bg-zinc-700'
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentStep === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
                 }`}
                 aria-label={`Go to step ${idx + 1}`}
               />
@@ -119,25 +117,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             {currentStep > 0 ? (
               <button
                 onClick={handlePrev}
-                className="py-3 px-6 text-sm font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                className="py-3.5 px-5 text-xs font-black text-white/80 hover:text-white transition-colors cursor-pointer"
               >
                 Back
               </button>
             ) : (
-              <div className="w-16"></div> // spacer
+              <div className="w-14"></div> // spacer
             )}
 
             <button
               onClick={handleNext}
-              className="flex-1 py-3 px-6 rounded-2xl bg-[#00B074] hover:bg-[#00905D] text-white font-extrabold text-sm border border-zinc-800 shadow-lg active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 py-3.5 px-6 rounded-full bg-white hover:bg-zinc-100 text-[#00B074] font-black text-sm shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               {currentStep === steps.length - 1 ? (
-                <>
-                  Get Started
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                <span>Get started</span>
               ) : (
-                'Next'
+                <span>Next</span>
               )}
             </button>
           </div>
