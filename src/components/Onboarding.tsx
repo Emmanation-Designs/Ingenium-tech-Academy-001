@@ -59,23 +59,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 px-6 py-12 select-none font-sans">
-      {/* Mobile App Container Frame (Virtual Device style, matching the mockup) */}
-      <div className="w-full max-w-[400px] bg-[#00B074] border border-emerald-500/20 flex flex-col justify-between min-h-[720px] rounded-[36px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
+      {/* Sleek Onboarding Card Frame */}
+      <div className="w-full max-w-[400px] bg-[#00B074] border border-emerald-500/20 flex flex-col justify-between min-h-[640px] rounded-[32px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
         
-        {/* Mockup Status Bar */}
-        <div className="flex justify-between items-center text-white/80 px-2 text-[11px] font-bold">
-          <span>10:16</span>
-          <div className="flex items-center gap-1.5">
-            {/* Cellular, WiFi, Battery bars */}
-            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.64 10.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
-            </svg>
-            <span className="w-5 h-2.5 border border-white/80 rounded-sm p-0.5 flex items-center">
-              <span className="bg-white h-full w-4/5 block rounded-2xs"></span>
-            </span>
-          </div>
-        </div>
-
         {/* Dynamic Step Content */}
         <div className="flex-1 flex flex-col justify-center my-8 text-center px-2">
           {/* Centered Book Icon */}

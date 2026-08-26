@@ -214,7 +214,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
       <div className="max-w-md mx-auto bg-zinc-950 min-h-screen shadow-2xl relative border-x border-zinc-850 flex flex-col justify-between">
         
         {/* Conditional Header Block */}
-        {activeTab !== 'home' && activeTab !== 'courses' ? (
+        {activeTab !== 'home' && activeTab !== 'courses' && (
           <header className="sticky top-0 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 py-4 px-6 flex items-center justify-between z-30">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#00B074]"></span>
@@ -272,19 +272,6 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               </div>
             </div>
           </header>
-        ) : (
-          /* Mockup Top Status Bar */
-          <div className="bg-transparent py-3 px-6 flex justify-between items-center text-zinc-500 text-[10px] font-bold z-30 select-none">
-            <span>10:16</span>
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 fill-current text-zinc-500" viewBox="0 0 24 24">
-                <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.64 10.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
-              </svg>
-              <span className="w-4 h-2 border border-zinc-600 rounded-sm p-0.5 flex items-center">
-                <span className="bg-zinc-500 h-full w-4/5 block rounded-2xs"></span>
-              </span>
-            </div>
-          </div>
         )}
 
         {/* Dynamic Inner Tab View */}
