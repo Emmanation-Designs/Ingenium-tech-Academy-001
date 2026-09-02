@@ -71,26 +71,44 @@ export const dataService = {
           // Fetch or prepare profile (triggers can sometimes take a microsecond)
           // We wait briefly and then try to fetch the profile
           await new Promise(resolve => setTimeout(resolve, 800));
-          const { data: profile, error: pError } = await supabase
+          let { data: profile, error: pError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle();
 
-          if (pError || !profile) {
-            // Fallback profile if trigger latency is high
+          if (!profile) {
+            // Determine if email should be admin based on core admin configurations
+            const isAdminEmail = [
+              'emmanuelnwaije21@gmail.com',
+              'ingeniumvirtualassistant@zohomail.com'
+            ].includes(email.toLowerCase());
+
+            // Fallback: Create and insert profile row directly from client
             const tempProfile: Profile = {
               id: data.user.id,
               full_name: fullName,
-              email: email,
-              phone: phone,
-              country: country,
+              email: email.toLowerCase(),
+              phone: phone || '',
+              country: country || '',
               timezone: timezone,
-              role: 'student',
+              role: isAdminEmail ? 'admin' : 'student',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             };
-            return { user: tempProfile, error: null };
+
+            const { data: upsertedProfile, error: upsertError } = await supabase
+              .from('profiles')
+              .upsert(tempProfile)
+              .select()
+              .maybeSingle();
+
+            if (!upsertError && upsertedProfile) {
+              profile = upsertedProfile;
+            } else {
+              // Return the temp profile to allow UI session continuation without breaking
+              return { user: tempProfile, error: null };
+            }
           }
 
           return { user: profile as Profile, error: null };
@@ -142,14 +160,44 @@ export const dataService = {
           if (error) return { user: null, error: error.message };
           if (!data.user) return { user: null, error: 'Sign in failed' };
 
-          const { data: profile, error: pError } = await supabase
+          let { data: profile, error: pError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle();
 
-          if (pError || !profile) {
-            return { user: null, error: 'Profile not found. Please contact support.' };
+          if (!profile) {
+            // Self-healing: If user exists in Auth but profiles record is missing,
+            // create it now.
+            const metadata = data.user.user_metadata || {};
+            const isAdminEmail = [
+              'emmanuelnwaije21@gmail.com',
+              'ingeniumvirtualassistant@zohomail.com'
+            ].includes(email.toLowerCase());
+
+            const tempProfile: Profile = {
+              id: data.user.id,
+              full_name: metadata.full_name || metadata.name || 'Student',
+              email: email.toLowerCase(),
+              phone: metadata.phone || '',
+              country: metadata.country || '',
+              timezone: metadata.timezone || 'Africa/Lagos',
+              role: isAdminEmail ? 'admin' : 'student',
+              created_at: data.user.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            const { data: upsertedProfile } = await supabase
+              .from('profiles')
+              .upsert(tempProfile)
+              .select()
+              .maybeSingle();
+
+            if (upsertedProfile) {
+              profile = upsertedProfile;
+            } else {
+              return { user: tempProfile, error: null };
+            }
           }
 
           return { user: profile as Profile, error: null };

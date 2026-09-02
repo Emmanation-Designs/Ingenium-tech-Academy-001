@@ -6,6 +6,48 @@ import {
   MapPin, Clock, Phone, AlertCircle, ChevronRight, CheckCircle, Plus, Send, Sun, Moon 
 } from 'lucide-react';
 
+const getCourseImage = (course: Course) => {
+  const url = course.image_url;
+  if (url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/') || url.startsWith('data:'))) {
+    return url;
+  }
+  
+  // Custom premium, high-quality technology and education illustrations/photos from Unsplash
+  const title = (course.title || '').toLowerCase();
+  if (title.includes('data') || title.includes('analytics') || title.includes('excel') || title.includes('power bi')) {
+    return 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80';
+  }
+  if (title.includes('design') || title.includes('ui') || title.includes('ux') || title.includes('figma') || title.includes('product')) {
+    return 'https://images.unsplash.com/photo-1561070791-26c113006238?w=600&auto=format&fit=crop&q=80';
+  }
+  if (title.includes('code') || title.includes('develop') || title.includes('software') || title.includes('web') || title.includes('python') || title.includes('javascript') || title.includes('frontend')) {
+    return 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=600&auto=format&fit=crop&q=80';
+  }
+  if (title.includes('scrum') || title.includes('agile') || title.includes('project') || title.includes('management')) {
+    return 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=600&auto=format&fit=crop&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80';
+};
+
+const getCourseDescription = (course: Course) => {
+  const desc = course.short_description || '';
+  if (desc.trim().length > 8) {
+    return desc;
+  }
+  
+  const title = (course.title || '').toLowerCase();
+  if (title.includes('data') || title.includes('analyt')) {
+    return 'Master data analytical techniques, modern visualization with Power BI/Excel, and SQL queries to unlock data-driven business insights.';
+  }
+  if (title.includes('design') || title.includes('ui') || title.includes('ux') || title.includes('figma')) {
+    return 'Learn end-to-end UX research, wireframing, interactive prototyping, and visual interface design principles in Figma.';
+  }
+  if (title.includes('develop') || title.includes('code') || title.includes('software') || title.includes('web')) {
+    return 'Build modern web solutions. Learn frontend and backend development with hands-on labs and direct mentor feedback.';
+  }
+  return 'Participate in professional instructor-led sessions, live weekly labs, and build a high-caliber portfolio to accelerate your career.';
+};
+
 interface StudentAppProps {
   currentUser: Profile;
   onLogout: () => void;
@@ -379,32 +421,44 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {courses.slice(0, 4).map(course => (
-                        <div
-                          key={course.id}
-                          onClick={() => {
-                            setActiveTab('courses');
-                            setSearchQuery(course.title);
-                          }}
-                          className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:border-zinc-700 active:scale-99 transition-all shadow-md"
-                        >
-                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0">
-                            <img src={course.image_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=150&auto=format&fit=crop&q=60'} alt={course.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-black text-white truncate">{course.title}</h4>
-                            <p className="text-[10px] text-zinc-500 font-bold mt-0.5">By {course.instructor_name || 'Shoun Paulk'}</p>
-                            <div className="flex items-center gap-2 mt-1.5 text-[9px] text-zinc-400 font-extrabold flex-wrap">
-                              <span className="text-amber-400">★ 4.9 (225 reviews)</span>
-                              <span>•</span>
-                              <span>20 lessons</span>
+                      {courses.slice(0, 4).map(course => {
+                        const pricingInfo = getCoursePriceAndCurrency(course);
+                        return (
+                          <div
+                            key={course.id}
+                            onClick={() => {
+                              setActiveTab('courses');
+                              setSearchQuery(course.title);
+                            }}
+                            className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:border-zinc-700 active:scale-99 transition-all shadow-md"
+                          >
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0">
+                              <img 
+                                src={getCourseImage(course)} 
+                                alt={course.title} 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=150&auto=format&fit=crop&q=60';
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-black text-white truncate">{course.title}</h4>
+                              <p className="text-[10px] text-zinc-500 font-bold mt-0.5">By {course.instructor_name || 'Shoun Paulk'}</p>
+                              <div className="flex items-center gap-2 mt-1.5 text-[9px] text-zinc-400 font-extrabold flex-wrap">
+                                <span className="text-amber-400">★ 4.9 (225 reviews)</span>
+                                <span>•</span>
+                                <span>20 lessons</span>
+                              </div>
+                            </div>
+                            <div className="text-xs font-black text-[#00B074] shrink-0 px-2">
+                              {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
                             </div>
                           </div>
-                          <div className="text-xs font-black text-[#00B074] shrink-0 px-2">
-                            {getCoursePriceAndCurrency(course).symbol}{getCoursePriceAndCurrency(course).price}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -511,75 +565,107 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {filteredCourses.map(course => {
                     const matchedSelection = getSelectionForCourse(course.id);
                     const isEnrolled = isEnrolledInCourse(course.id);
                     const courseScheds = schedulesMap[course.id] || [];
                     const err = courseErrors[course.id];
+                    const pricingInfo = getCoursePriceAndCurrency(course);
 
                     return (
-                      <div key={course.id} className="bg-zinc-900 border border-zinc-800/80 rounded-[24px] overflow-hidden p-3.5 space-y-3 shadow-md">
-                        {/* Mockup Style Top Card Hero Image */}
-                        {course.image_url && (
-                          <div className="w-full aspect-[16/10] rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800 shadow-inner">
-                            <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                        )}
+                      <div key={course.id} className="bg-zinc-900 border border-zinc-800/60 rounded-[24px] overflow-hidden p-4 space-y-4 shadow-lg relative group transition-all duration-300">
+                        {/* High-quality top Card Hero Image with category overlay */}
+                        <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800/80 relative shadow-inner">
+                          <img 
+                            src={getCourseImage(course)} 
+                            alt={course.title} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80';
+                            }}
+                          />
+                          {course.category && (
+                            <span className="absolute top-3 left-3 bg-[#00B074] text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md">
+                              {course.category}
+                            </span>
+                          )}
+                        </div>
 
-                        {/* Text and visual info layout matching Mockup 2 */}
-                        <div className="px-1 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <h3 className="text-base font-black text-white leading-tight">{course.title}</h3>
-                              <p className="text-[11px] text-zinc-400 font-bold mt-0.5">By {course.instructor_name || 'Shoun Paulk'}</p>
+                        {/* Text and visual info layout */}
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3 pt-0.5">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-base font-black text-white leading-snug tracking-tight">{course.title}</h3>
+                              <p className="text-[11px] text-zinc-400 font-bold mt-0.5 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                By {course.instructor_name || 'Shoun Paulk'}
+                              </p>
                             </div>
-                            <div className="text-right shrink-0">
+                            <div className="text-right shrink-0 bg-[#00B074]/10 border border-[#00B074]/20 rounded-xl px-2.5 py-1.5 flex flex-col items-center">
                               <span className="text-sm font-black text-[#00B074]">
-                                {getCoursePriceAndCurrency(course).symbol}{getCoursePriceAndCurrency(course).price}
+                                {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
                               </span>
-                              <span className="block text-[8px] text-zinc-500 font-bold mt-0.5 uppercase tracking-wide">
-                                {getCoursePriceAndCurrency(course).currency}
+                              <span className="block text-[8px] text-zinc-400 font-black uppercase tracking-wider mt-0.5">
+                                {pricingInfo.currency}
                               </span>
                             </div>
                           </div>
 
-                          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                            {course.short_description || "High-intensity practical course with live instructor hours."}
+                          <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                            {getCourseDescription(course)}
                           </p>
 
-                          {/* Stats line matching Select your course */}
-                          <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-extrabold pt-0.5 flex-wrap">
-                            <span className="text-amber-400">★ 4.9 (225 reviews)</span>
-                            <span>•</span>
-                            <span>20 lessons</span>
-                            <span>•</span>
-                            <span>4 hours 36m</span>
+                          {/* Stats line with subtle icons */}
+                          <div className="flex items-center gap-3.5 text-[10px] text-zinc-400 font-extrabold border-y border-zinc-800/40 py-2.5 px-1 bg-zinc-950/25 rounded-xl">
+                            <span className="text-amber-400 flex items-center gap-1">
+                              <span className="text-xs">★</span> 4.9 (225 reviews)
+                            </span>
+                            <span className="text-zinc-600">•</span>
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <BookOpen className="w-3.5 h-3.5" /> 20 lessons
+                            </span>
+                            <span className="text-zinc-600">•</span>
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <Clock className="w-3.5 h-3.5" /> 4h 36m
+                            </span>
                           </div>
 
-                          {/* Scheduling & selection selection controls */}
+                          {/* Scheduling as Interactive Choice Chips instead of dull native HTML selects */}
                           {!isEnrolled && !matchedSelection && courseScheds.length > 0 && (
-                            <div className="space-y-1.5 pt-1.5">
-                              <label className="block text-[9px] uppercase font-extrabold text-zinc-500 tracking-wider">
-                                Select class session options
+                            <div className="space-y-2 pt-1.5">
+                              <label className="block text-[9px] uppercase font-extrabold text-zinc-400 tracking-wider">
+                                Select preferred class schedule option
                               </label>
-                              <select
-                                value={selectedSchedules[course.id] || ''}
-                                onChange={(e) => setSelectedSchedules(prev => ({ ...prev, [course.id]: e.target.value }))}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-xs font-bold text-white focus:outline-none focus:border-[#00B074] cursor-pointer"
-                              >
-                                <option value="">-- Choose Class Time --</option>
-                                {courseScheds.map(sch => (
-                                  <option key={sch.id} value={sch.id}>
-                                    {sch.label} ({sch.day_of_week})
-                                  </option>
-                                ))}
-                              </select>
+                              <div className={`grid gap-2 ${courseScheds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {courseScheds.map(sch => {
+                                  const isSelected = selectedSchedules[course.id] === sch.id;
+                                  return (
+                                    <button
+                                      key={sch.id}
+                                      type="button"
+                                      onClick={() => setSelectedSchedules(prev => ({ ...prev, [course.id]: sch.id }))}
+                                      className={`py-2 px-3 rounded-xl border text-[10px] font-black transition-all text-center flex flex-col items-center justify-center gap-0.5 shadow-sm cursor-pointer ${
+                                        isSelected
+                                          ? 'bg-[#00B074] border-[#00905D] text-white'
+                                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                                      }`}
+                                    >
+                                      <span className="font-black">{sch.label}</span>
+                                      <span className={`text-[8px] font-bold ${isSelected ? 'text-emerald-100' : 'text-zinc-500'}`}>
+                                        {sch.day_of_week}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
 
                           {err && (
-                            <p className="text-xs font-bold text-red-400 bg-red-955/20 p-2 rounded-xl border border-red-900/40">
+                            <p className="text-xs font-bold text-red-400 bg-red-950/20 p-2.5 rounded-xl border border-red-900/40 mt-2">
                               {err}
                             </p>
                           )}
@@ -587,21 +673,21 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                           {/* Selection Actions */}
                           <div className="pt-2">
                             {isEnrolled ? (
-                              <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-955/20 border border-emerald-900/30 text-[#00B074] text-xs font-black text-center flex items-center justify-center gap-1.5">
+                              <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-[#00B074] text-xs font-black text-center flex items-center justify-center gap-1.5">
                                 <CheckCircle className="w-4 h-4" />
                                 Active Enrollment
                               </div>
                             ) : matchedSelection ? (
-                              <div className="w-full py-2.5 px-4 rounded-xl bg-amber-955/10 border border-amber-900/30 text-amber-400 text-xs font-black text-center flex items-center justify-between">
-                                <span>Selected</span>
-                                <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full border border-amber-800/30 bg-zinc-950">
+                              <div className="w-full py-2.5 px-4 rounded-xl bg-amber-950/20 border border-amber-500/20 text-amber-400 text-xs font-black text-center flex items-center justify-between">
+                                <span className="font-extrabold">Selection Requested</span>
+                                <span className="text-[9px] uppercase font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10">
                                   {matchedSelection.status}
                                 </span>
                               </div>
                             ) : (
                               <button
                                 onClick={() => handleSelectCourse(course.id)}
-                                className="w-full py-2.5 px-4 rounded-xl bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-black border border-zinc-850 shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="w-full py-3 px-4 rounded-xl bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-black border border-emerald-600/20 shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               >
                                 <Plus className="w-4 h-4" />
                                 Add to My Selection

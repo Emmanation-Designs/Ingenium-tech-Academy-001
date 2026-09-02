@@ -48,6 +48,10 @@ CREATE POLICY "Users can read their own profile"
     ON public.profiles FOR SELECT
     USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert their own profile"
+    ON public.profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Admins can read all profiles"
     ON public.profiles FOR SELECT
     USING (public.is_admin());
