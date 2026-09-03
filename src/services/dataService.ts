@@ -356,15 +356,27 @@ export const dataService = {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error('Supabase database is not configured.');
       }
-      const filePath = `categories/${categoryId}/hero`;
+      const rawExt = file.name ? file.name.split('.').pop()?.toLowerCase() : 'jpg';
+      const safeExt = rawExt && /^[a-z0-9]+$/i.test(rawExt) ? rawExt : 'jpg';
+      const filePath = `categories/${categoryId}/hero.${safeExt}`;
+
       const { error } = await supabase.storage
         .from('course-images')
         .upload(filePath, file, {
           upsert: true,
-          contentType: file.type
+          contentType: file.type || 'image/jpeg'
         });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('bucket not found') || (error as any).statusCode === '404' || (error as any).status === 400) {
+          throw new Error("Supabase Storage bucket 'course-images' not found. Please create the public bucket 'course-images' in your Supabase project (see migration 008).");
+        }
+        if (msg.includes('policy') || (error as any).statusCode === '403') {
+          throw new Error("Permission denied uploading image to 'course-images'. Please check your Supabase Storage RLS policies.");
+        }
+        throw new Error(error.message);
+      }
       
       const { data: { publicUrl } } = supabase.storage
         .from('course-images')
@@ -534,15 +546,27 @@ export const dataService = {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error('Supabase database is not configured.');
       }
-      const filePath = `${courseId}/hero`;
+      const rawExt = file.name ? file.name.split('.').pop()?.toLowerCase() : 'jpg';
+      const safeExt = rawExt && /^[a-z0-9]+$/i.test(rawExt) ? rawExt : 'jpg';
+      const filePath = `${courseId}/hero.${safeExt}`;
+
       const { error } = await supabase.storage
         .from('course-images')
         .upload(filePath, file, {
           upsert: true,
-          contentType: file.type
+          contentType: file.type || 'image/jpeg'
         });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('bucket not found') || (error as any).statusCode === '404' || (error as any).status === 400) {
+          throw new Error("Supabase Storage bucket 'course-images' not found. Please create the public bucket 'course-images' in your Supabase project (see migration 008).");
+        }
+        if (msg.includes('policy') || (error as any).statusCode === '403') {
+          throw new Error("Permission denied uploading course image to 'course-images'. Please check your Supabase Storage RLS policies.");
+        }
+        throw new Error(error.message);
+      }
       
       const { data: { publicUrl } } = supabase.storage
         .from('course-images')
@@ -553,12 +577,14 @@ export const dataService = {
 
     async removeHeroImage(courseId: string): Promise<void> {
       if (isSupabaseConfigured && supabase) {
-        const filePath = `${courseId}/hero`;
-        const { error } = await supabase.storage
-          .from('course-images')
-          .remove([filePath]);
-        if (error) {
-          console.warn('[Supabase Storage] Error removing course image:', error.message);
+        try {
+          const { data: files } = await supabase.storage.from('course-images').list(courseId);
+          if (files && files.length > 0) {
+            const filePaths = files.map(f => `${courseId}/${f.name}`);
+            await supabase.storage.from('course-images').remove(filePaths);
+          }
+        } catch (e) {
+          console.warn('[Supabase Storage] Error removing course image files:', e);
         }
       }
     },
