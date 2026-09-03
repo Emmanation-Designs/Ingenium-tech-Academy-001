@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification, CourseCategory } from '../types';
 import { 
-  Home as HomeIcon, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle2, 
-  MapPin, Clock, Phone, AlertCircle, ChevronRight, CheckCircle, Plus, Send, Sun, Moon 
+  Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
+  MapPin, Clock, Phone, AlertCircle, ChevronRight, Plus, Send, Search,
+  SlidersHorizontal, Trash2, Camera, HelpCircle, Info, Settings, Globe, Lock, ChevronLeft,
+  Check, BarChart2, Video, Pencil, Sparkles, X, Database, Palette, Megaphone, Code, Terminal, PenTool
 } from 'lucide-react';
 
 const getCourseImage = (course: Course) => {
@@ -12,7 +14,6 @@ const getCourseImage = (course: Course) => {
     return url;
   }
   
-  // Custom premium, high-quality technology and education illustrations/photos from Unsplash
   const title = (course.title || '').toLowerCase();
   if (title.includes('data') || title.includes('analytics') || title.includes('excel') || title.includes('power bi')) {
     return 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80';
@@ -63,7 +64,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   theme,
   onToggleTheme,
 }) => {
-  const [activeTab, setActiveTab] = useState<'home' | 'courses' | 'learning' | 'profile'>('courses');
+  const [activeTab, setActiveTab] = useState<'home' | 'selections' | 'learning' | 'profile'>('home');
   const [courses, setCourses] = useState<Course[]>([]);
   const [selections, setSelections] = useState<CourseSelection[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -74,45 +75,76 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   
-  // Filter courses by search input and category select
+  // Selection status filter
+  const [selectionFilter, setSelectionFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  
+  // Detailed overlays states
+  const [selectedCourseForDetails, setSelectedCourseForDetails] = useState<Course | null>(null);
+  const [showClassTimeSelector, setShowClassTimeSelector] = useState(false);
+  const [chosenScheduleId, setChosenScheduleId] = useState<string>('');
+
+  // Course filter logic
   const filteredCourses = courses.filter(course => {
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch = !query ? true : (
       course.title.toLowerCase().includes(query) ||
-      course.short_description?.toLowerCase().includes(query) ||
-      course.category?.toLowerCase().includes(query)
+      (course.short_description || '').toLowerCase().includes(query) ||
+      (course.category || '').toLowerCase().includes(query)
     );
-    const matchesCategory = !selectedCategoryId ? true : course.category_id === selectedCategoryId;
+    if (!selectedCategoryId) return matchesSearch;
+    const activeCategory = categories.find(c => c.id === selectedCategoryId);
+    const matchesCategory = 
+      course.category_id === selectedCategoryId ||
+      (activeCategory && (course.category || '').toLowerCase().trim() === activeCategory.name.toLowerCase().trim());
     return matchesSearch && matchesCategory;
   });
 
-  // Forms & UI state
   const [loading, setLoading] = useState(false);
-  const [selectedSchedules, setSelectedSchedules] = useState<Record<string, string>>({}); // courseId -> scheduleId
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    full_name: currentUser.full_name,
-    phone: currentUser.phone || '',
-    country: currentUser.country || '',
-    timezone: currentUser.timezone || 'Africa/Lagos'
-  });
-  const [profileSuccess, setProfileSuccess] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Load all user-specific data from database
+  // Phone number addition/editing states
+  const [isAddingPhone, setIsAddingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const handleSavePhone = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanPhone = phoneInput.trim();
+    if (!cleanPhone) {
+      setPhoneError('Please enter a valid phone number');
+      return;
+    }
+    setSavingPhone(true);
+    setPhoneError(null);
+    try {
+      const { profile, error } = await dataService.profile.updateProfile(currentUser.id, {
+        phone: cleanPhone,
+      });
+      if (error) {
+        setPhoneError(error);
+      } else if (profile) {
+        onProfileUpdate(profile);
+        setIsAddingPhone(false);
+      }
+    } catch (err: any) {
+      setPhoneError(err.message || 'Failed to update phone number');
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  // Load all student specific data
   const loadStudentData = async () => {
     setLoading(true);
     try {
-      // 0. Fetch active course categories
       const fetchedCats = await dataService.categories.getCategories();
       setCategories(fetchedCats.filter(c => c.is_active));
 
-      // 1. Fetch available courses
       const fetchedCourses = await dataService.courses.getCourses();
       const published = fetchedCourses.filter(c => c.is_published || c.status === 'published');
       setCourses(published);
 
-      // 2. Fetch schedules for each course
       const tempSchedules: Record<string, CourseSchedule[]> = {};
       for (const course of published) {
         const scheds = await dataService.courses.getCourseSchedules(course.id);
@@ -120,15 +152,12 @@ export const StudentApp: React.FC<StudentAppProps> = ({
       }
       setSchedulesMap(tempSchedules);
 
-      // 3. Fetch course selections (requests)
       const fetchedSelections = await dataService.selections.getCourseSelections(currentUser.id);
       setSelections(fetchedSelections);
 
-      // 4. Fetch actual enrollments (granted courses)
       const fetchedEnrollments = await dataService.enrollments.getEnrollments(currentUser.id);
       setEnrollments(fetchedEnrollments);
 
-      // 5. Setup basic mock notifications for active sessions
       const demoNotifications: Notification[] = [
         {
           id: 'notif-1',
@@ -164,81 +193,73 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
     if (countryUpper === 'NIGERIA' || countryUpper === 'NG') {
       return {
-        price: pricing?.ngn_price ?? 120000,
+        price: pricing?.ngn_price ?? 200000,
         currency: 'NGN',
-        symbol: '₦',
-        isDefaultFallback: !pricing
+        symbol: '₦'
       };
     } else if (eurozoneCountries.includes(countryUpper)) {
       return {
-        price: pricing?.eur_price ?? 120,
+        price: pricing?.eur_price ?? 400,
         currency: 'EUR',
-        symbol: '€',
-        isDefaultFallback: !pricing
+        symbol: '€'
       };
     } else {
       return {
-        price: pricing?.usd_price ?? 150,
+        price: pricing?.usd_price ?? 400,
         currency: 'USD',
-        symbol: '$',
-        isDefaultFallback: !pricing
+        symbol: '$'
       };
     }
   };
 
-  const handleSelectCourse = async (courseId: string) => {
-    const selectedScheduleId = selectedSchedules[courseId];
-    if (!selectedScheduleId && schedulesMap[courseId]?.length > 0) {
-      alert("Please select a preferred class time option before joining.");
+  const handleSelectCourse = async () => {
+    if (!selectedCourseForDetails) return;
+    
+    const courseScheds = schedulesMap[selectedCourseForDetails.id] || [];
+    if (!chosenScheduleId && courseScheds.length > 0) {
+      alert("Please select a preferred class time option.");
       return;
     }
 
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return;
-
-    const pricingInfo = getCoursePriceAndCurrency(course);
+    const pricingInfo = getCoursePriceAndCurrency(selectedCourseForDetails);
 
     try {
-      setErrorForCourse(courseId, null);
+      setLoading(true);
       await dataService.selections.createCourseSelection(
         currentUser.id,
-        courseId,
-        selectedScheduleId,
+        selectedCourseForDetails.id,
+        chosenScheduleId || undefined,
         pricingInfo.price,
         pricingInfo.currency,
-        currentUser.country || 'International'
+        currentUser.country || 'Nigeria'
       );
+      
       // Reload selections
       const updated = await dataService.selections.getCourseSelections(currentUser.id);
       setSelections(updated);
+      
+      // Reset overlay states and transition to selection tab
+      setShowClassTimeSelector(false);
+      setSelectedCourseForDetails(null);
+      setChosenScheduleId('');
+      setActiveTab('selections');
     } catch (err: any) {
-      setErrorForCourse(courseId, err.message || "Could not select course.");
+      alert(err.message || "Could not complete selection.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const [courseErrors, setCourseErrors] = useState<Record<string, string | null>>({});
-  const setErrorForCourse = (courseId: string, msg: string | null) => {
-    setCourseErrors(prev => ({ ...prev, [courseId]: msg }));
-  };
-
-  const handleUpdateProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileSuccess(false);
-    setProfileError(null);
-
-    const { profile, error } = await dataService.profile.updateProfile(currentUser.id, {
-      full_name: profileForm.full_name,
-      phone: profileForm.phone,
-      country: profileForm.country,
-      timezone: profileForm.timezone
-    });
-
-    if (error) {
-      setProfileError(error);
-    } else if (profile) {
-      onProfileUpdate(profile);
-      setProfileSuccess(true);
-      setTimeout(() => setProfileSuccess(false), 3000);
+  const handleDeleteSelection = async (selectionId: string) => {
+    if (!window.confirm("Are you sure you want to remove this course from your selections?")) {
+      return;
+    }
+    try {
+      await dataService.selections.deleteCourseSelection(selectionId);
+      const updated = await dataService.selections.getCourseSelections(currentUser.id);
+      setSelections(updated);
+    } catch (err: any) {
+      alert(err.message || "Failed to delete selection.");
     }
   };
 
@@ -250,449 +271,661 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     return enrollments.some(e => e.course_id === courseId);
   };
 
+  // Helper to resolve dynamic category icons exactly like Mockup 1
+  const getCategoryIconElement = (name: string, isSelected: boolean = false) => {
+    const norm = name.toLowerCase();
+    const iconClass = `w-6 h-6 stroke-[1.8] ${isSelected ? 'text-white' : 'text-zinc-700'}`;
+    if (norm.includes('all')) {
+      return <SlidersHorizontal className={iconClass} />;
+    }
+    if (norm.includes('science') || norm.includes('data') || norm.includes('analytics')) {
+      return <Database className={iconClass} />;
+    }
+    if (norm.includes('design') || norm.includes('ui') || norm.includes('ux') || norm.includes('creative')) {
+      return <Palette className={iconClass} />;
+    }
+    if (norm.includes('marketing') || norm.includes('digital') || norm.includes('growth')) {
+      return <Megaphone className={iconClass} />;
+    }
+    if (norm.includes('develop') || norm.includes('code') || norm.includes('software') || norm.includes('web') || norm.includes('program')) {
+      return <Code className={iconClass} />;
+    }
+    return <BookOpen className={iconClass} />;
+  };
+
   return (
-    <div className="min-h-screen dot-grid text-white font-sans pb-24">
-      {/* Mobile-centric frame centered on large viewports */}
-      <div className="max-w-md mx-auto bg-zinc-950 min-h-screen shadow-2xl relative border-x border-zinc-850 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#00B074]/30">
+      
+      {/* Mobile Frame Simulator */}
+      <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col justify-between border-x border-[#EAEAEA]">
         
-        {/* Conditional Header Block */}
-        {activeTab !== 'home' && activeTab !== 'courses' && (
-          <header className="sticky top-0 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 py-4 px-6 flex items-center justify-between z-30">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00B074]"></span>
-              <span className="font-extrabold text-sm tracking-tight text-white">Ingenium Tech Academy</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onToggleTheme}
-                className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-zinc-800 flex items-center justify-center"
-                title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-                aria-label="Toggle theme"
+        {/* DETAILED OVERLAY 2: CHOOSE CLASS TIME */}
+        {selectedCourseForDetails && showClassTimeSelector && (
+          <div className="absolute inset-0 bg-white z-50 flex flex-col justify-between animate-in slide-in-from-right duration-250">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-[#F2F2F2] flex items-center justify-between">
+              <button 
+                onClick={() => setShowClassTimeSelector(false)} 
+                className="p-1 text-zinc-800 hover:text-zinc-600 transition-all"
+                aria-label="Back"
               >
-                {theme === 'light' ? (
-                  <Moon className="w-4 h-4 text-zinc-700" />
-                ) : (
-                  <Sun className="w-4 h-4 text-white" />
-                )}
+                <ChevronLeft className="w-6 h-6" />
               </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                  className="p-2 rounded-full hover:bg-zinc-800 active:scale-95 transition-all relative cursor-pointer border border-zinc-800"
-                  aria-label="View notifications"
-                >
-                  <Bell className="w-4 h-4 text-white" />
-                  {notifications.some(n => !n.is_read) && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00B074]"></span>
-                  )}
-                </button>
-
-                {/* Notification Dropdown Container */}
-                {showNotificationCenter && (
-                  <div className="absolute right-0 mt-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-xl w-72 z-50">
-                    <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
-                      <span className="font-bold text-xs uppercase tracking-wider text-zinc-400">Notifications</span>
-                      <button 
-                        onClick={() => setShowNotificationCenter(false)}
-                        className="text-[10px] font-bold text-[#00B074] hover:underline"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="space-y-3 max-h-60 overflow-y-auto">
-                      {notifications.map(n => (
-                        <div key={n.id} className="text-xs">
-                          <p className="font-bold text-white">{n.title}</p>
-                          <p className="text-zinc-400 mt-0.5 leading-relaxed">{n.message}</p>
-                          <span className="text-[9px] text-zinc-500 mt-1 block">Just now</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <h2 className="text-base font-semibold text-zinc-900">Choose Class Time</h2>
+              <div className="w-6 h-6"></div> {/* Spacer for symmetry */}
             </div>
-          </header>
-        )}
 
-        {/* Dynamic Inner Tab View */}
-        <main className="flex-1 p-6">
-          
-          {/* TAB 1: HOME (3rd Mockup Screen Style: "Find your favorite course") */}
-          {activeTab === 'home' && (
-            <div className="flex-1 flex flex-col -mx-6 -mt-6">
-              {/* Green Header block with rounded bottom edges */}
-              <div className="bg-[#00B074] rounded-b-[36px] px-6 pt-5 pb-8 text-white space-y-4 shadow-lg">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-black leading-tight tracking-tight">Find your favorite course</h2>
-                    <p className="text-[11px] text-emerald-100 font-semibold mt-0.5">Explore practical technology fields today</p>
-                  </div>
-                  <button
-                    onClick={onToggleTheme}
-                    className="p-2 rounded-full bg-emerald-800/40 hover:bg-emerald-800/60 border border-emerald-500/20 active:scale-95 transition-all cursor-pointer flex items-center justify-center text-white"
-                    title="Toggle theme"
-                  >
-                    {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                  </button>
-                </div>
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              {/* Local timezone alert banner */}
+              <div className="bg-[#EAFBF3] border border-[#00B074]/30 p-4 rounded-2xl flex items-start gap-3">
+                <Globe className="w-4 h-4 text-[#00875A] shrink-0 mt-0.5" />
+                <p className="text-xs font-medium text-[#00875A] leading-relaxed">
+                  All times are shown in your local time zone ({currentUser.timezone || 'Africa/Lagos'})
+                </p>
+              </div>
+
+              {/* Class Scheds List */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-zinc-900">Available Class Times</h3>
                 
-                {/* Integrated Search Bar inside Green block */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full py-2.5 pl-10 pr-4 text-xs bg-white text-zinc-950 rounded-full font-bold focus:outline-none placeholder-zinc-400 border-0 shadow-inner"
-                  />
-                  <svg className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Home main body contents */}
-              <div className="p-6 space-y-6">
-                
-                {/* Explore Categories (Mockup 3 Section) */}
-                <div className="space-y-3.5">
-                  <div className="flex justify-between items-center px-1">
-                    <h3 className="text-sm font-black tracking-tight text-white">Explore categories</h3>
-                    <button 
-                      onClick={() => {
-                        setSelectedCategoryId('');
-                        setActiveTab('courses');
-                      }} 
-                      className="text-xs font-extrabold text-[#00B074] hover:underline cursor-pointer"
-                    >
-                      See all
-                    </button>
-                  </div>
-                  
-                  {categories.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-2xl">
-                      No categories defined yet.
-                    </div>
-                  ) : (
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-                      {categories.map(cat => (
-                        <div
-                          key={cat.id}
-                          onClick={() => {
-                            setSelectedCategoryId(cat.id);
-                            setActiveTab('courses');
-                          }}
-                          className="bg-zinc-900 border border-zinc-800/60 hover:border-zinc-700 rounded-2xl p-3 shrink-0 w-64 flex items-center gap-3 cursor-pointer active:scale-98 transition-all shadow-md"
-                        >
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0">
-                            <img src={cat.image_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=60'} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-black text-white truncate">{cat.name}</h4>
-                            <p className="text-[10px] text-zinc-500 font-bold mt-0.5 truncate">Click to filter courses</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="text-[10px] text-amber-400 font-black">★ 4.8</span>
-                              <span className="text-[9px] text-[#00B074] font-black uppercase tracking-wider bg-[#00B074]/10 px-1.5 py-0.5 rounded-full">Explore</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Popular Courses (Mockup 3 Section) */}
-                <div className="space-y-3.5">
-                  <div className="flex justify-between items-center px-1">
-                    <h3 className="text-sm font-black tracking-tight text-white font-sans">Popular Courses</h3>
-                    <button 
-                      onClick={() => setActiveTab('courses')} 
-                      className="text-xs font-extrabold text-[#00B074] hover:underline cursor-pointer"
-                    >
-                      See all
-                    </button>
-                  </div>
-
-                  {courses.length === 0 ? (
-                    <div className="p-5 text-center text-xs text-zinc-500 bg-zinc-900 rounded-2xl border border-zinc-800">
-                      No courses available yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {courses.slice(0, 4).map(course => {
-                        const pricingInfo = getCoursePriceAndCurrency(course);
-                        return (
-                          <div
-                            key={course.id}
-                            onClick={() => {
-                              setActiveTab('courses');
-                              setSearchQuery(course.title);
-                            }}
-                            className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:border-zinc-700 active:scale-99 transition-all shadow-md"
-                          >
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0">
-                              <img 
-                                src={getCourseImage(course)} 
-                                alt={course.title} 
-                                className="w-full h-full object-cover" 
-                                referrerPolicy="no-referrer"
-                                onError={(e) => {
-                                  e.currentTarget.onerror = null;
-                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=150&auto=format&fit=crop&q=60';
-                                }}
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs font-black text-white truncate">{course.title}</h4>
-                              <p className="text-[10px] text-zinc-500 font-bold mt-0.5">By {course.instructor_name || 'Shoun Paulk'}</p>
-                              <div className="flex items-center gap-2 mt-1.5 text-[9px] text-zinc-400 font-extrabold flex-wrap">
-                                <span className="text-amber-400">★ 4.9 (225 reviews)</span>
-                                <span>•</span>
-                                <span>20 lessons</span>
-                              </div>
-                            </div>
-                            <div className="text-xs font-black text-[#00B074] shrink-0 px-2">
-                              {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: COURSES (2nd Mockup Screen Style: "Select your course") */}
-          {activeTab === 'courses' && (
-            <div className="space-y-5 flex-1 flex flex-col">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-black text-white tracking-tight">Select your course</h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">Select a course to build your curriculum selection</p>
-                </div>
-                <button
-                  onClick={onToggleTheme}
-                  className="p-2 rounded-full hover:bg-zinc-850 border border-zinc-800 active:scale-95 transition-all cursor-pointer flex items-center justify-center text-white"
-                  title="Toggle theme"
-                >
-                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {courses.length > 0 && (
-                <div className="space-y-3.5">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search courses"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full py-2.5 pl-9 pr-10 text-xs bg-zinc-900 border border-zinc-800 rounded-full font-bold text-white focus:outline-none focus:border-[#00B074] placeholder-zinc-500 shadow-inner"
-                    />
-                    <svg className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] uppercase font-black text-zinc-500 hover:text-white"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Category filter pills */}
-                  {categories.length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                      <button
-                        onClick={() => setSelectedCategoryId('')}
-                        className={`py-1 px-3.5 rounded-full text-[10px] font-black transition-all shrink-0 cursor-pointer border ${
-                          selectedCategoryId === ''
-                            ? 'bg-[#00B074] text-white border-[#00905D] shadow-sm'
-                            : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
-                        }`}
-                      >
-                        All Categories
-                      </button>
-                      {categories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategoryId(cat.id)}
-                          className={`py-1 px-3.5 rounded-full text-[10px] font-black transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                            selectedCategoryId === cat.id
-                              ? 'bg-[#00B074] text-white border-[#00905D] shadow-sm'
-                              : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                {(schedulesMap[selectedCourseForDetails.id] || []).length === 0 ? (
+                  <p className="text-xs text-zinc-400 font-normal bg-[#F9F9F9] p-4 rounded-xl text-center border border-[#EAEAEA]">
+                    No class schedules configured for this course yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(schedulesMap[selectedCourseForDetails.id] || []).map(sch => {
+                      const isSelected = chosenScheduleId === sch.id;
+                      return (
+                        <div 
+                          key={sch.id}
+                          onClick={() => setChosenScheduleId(sch.id)}
+                          className={`border p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
+                            isSelected 
+                              ? 'border-[#00B074] bg-[#00B074]/5' 
+                              : 'border-[#EAEAEA] hover:border-zinc-300'
                           }`}
                         >
-                          {cat.image_url && (
-                            <img src={cat.image_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" referrerPolicy="no-referrer" />
-                          )}
-                          <span>{cat.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                          <div className="flex items-center gap-3.5">
+                            {/* Custom Radio Button */}
+                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected ? 'border-[#00B074] bg-[#00B074]' : 'border-zinc-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                            </div>
+                            
+                            {/* Class Time Info */}
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-semibold text-zinc-900">{sch.label}</p>
+                              <p className="text-xs text-zinc-500 font-medium">{sch.day_of_week}</p>
+                              <p className="text-xs text-zinc-400 font-normal">Starts 3rd June, 2025</p>
+                            </div>
+                          </div>
 
-              {courses.length === 0 ? (
-                <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl text-center space-y-3 my-8">
-                  <div className="inline-flex p-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-zinc-500">
-                    <BookOpen className="w-6 h-6" />
+                          {/* Seats Counter Badge */}
+                          <div className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                            isSelected 
+                              ? 'bg-[#00B074]/15 text-[#00875A]' 
+                              : 'bg-[#EAFBF3] text-[#00875A]'
+                          }`}>
+                            {sch.capacity ? `${sch.capacity} Seats left` : '12 Seats left'}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <h3 className="text-sm font-bold text-white">No courses available yet.</h3>
-                  <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                    The academy administrators are currently setting up the official course catalog. Please check back shortly.
+                )}
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-6 border-t border-[#F2F2F2] space-y-3 bg-white">
+              <button 
+                onClick={handleSelectCourse}
+                disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
+                className="w-full py-3.5 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-sm font-semibold transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
+              >
+                {loading ? 'Adding...' : 'Add to My Selection'}
+              </button>
+              <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-400 font-normal">
+                <Lock className="w-3.5 h-3.5" />
+                <span>You can select multiple courses</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DETAILED OVERLAY 1: COURSE DETAILS */}
+        {selectedCourseForDetails && !showClassTimeSelector && (
+          <div className="absolute inset-0 bg-white z-40 flex flex-col justify-between animate-in slide-in-from-right duration-250">
+            {/* Scrollable Details */}
+            <div className="flex-1 overflow-y-auto pb-6">
+              
+              {/* Back & Heart Hero Overlay Header */}
+              <div className="relative w-full aspect-[16/10] bg-zinc-100">
+                <img 
+                  src={getCourseImage(selectedCourseForDetails)} 
+                  alt={selectedCourseForDetails.title}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                
+                {/* Header buttons overlay */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                  <button 
+                    onClick={() => setSelectedCourseForDetails(null)}
+                    className="p-2.5 rounded-full bg-white/90 shadow-md hover:bg-white text-black active:scale-95 transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button className="p-2.5 rounded-full bg-white/90 shadow-md hover:bg-white text-black active:scale-95 transition-all">
+                    <Heart className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Course Title and Badges */}
+              <div className="px-6 pt-5 space-y-4">
+                <div className="flex">
+                  <span className="bg-[#EAFBF3] text-[#00875A] text-xs font-semibold px-3 py-1 rounded-md">
+                    {selectedCourseForDetails.category || 'Technology'}
+                  </span>
+                </div>
+
+                <h1 className="text-xl font-bold text-zinc-900 leading-tight">
+                  {selectedCourseForDetails.title}
+                </h1>
+
+                <p className="text-xs text-zinc-500 font-normal leading-relaxed">
+                  {getCourseDescription(selectedCourseForDetails)}
+                </p>
+
+                {/* 3 Circular Horizontal Stat Info Boxes */}
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
+                    <Clock className="w-4 h-4 text-[#00B074]" />
+                    <span className="text-[10px] text-zinc-400 font-medium">Duration</span>
+                    <span className="text-xs font-semibold text-zinc-900">8 Weeks</span>
+                  </div>
+                  <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
+                    <BarChart2 className="w-4 h-4 text-[#00B074]" />
+                    <span className="text-[10px] text-zinc-400 font-medium">Level</span>
+                    <span className="text-xs font-semibold text-zinc-900">Beginner</span>
+                  </div>
+                  <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
+                    <Video className="w-4 h-4 text-[#00B074]" />
+                    <span className="text-[10px] text-zinc-400 font-medium">Mode</span>
+                    <span className="text-xs font-semibold text-zinc-900">Live Online</span>
+                  </div>
+                </div>
+
+                {/* About This Course Section */}
+                <div className="pt-4 space-y-2 border-t border-[#F2F2F2]">
+                  <h3 className="text-sm font-semibold text-zinc-900">About this course</h3>
+                  <p className="text-xs text-zinc-600 font-normal leading-relaxed">
+                    This course will take you from beginner to confident in analyzing data. You will learn data formulas, preparation, dashboards, and reporting to land your dream high-paying role.
                   </p>
                 </div>
-              ) : filteredCourses.length === 0 ? (
-                <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl text-center space-y-2">
-                  <p className="text-xs font-bold text-zinc-400">No courses match your filters.</p>
+
+                {/* What You Will Learn Section */}
+                <div className="pt-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-zinc-900">What you will learn</h3>
+                  <div className="space-y-2.5">
+                    {[
+                      'Master core concepts and advanced topics',
+                      'Build interactive dashboards and custom reports',
+                      'Data cleaning and standard structured preparation',
+                      'Hands-on projects to launch a brilliant portfolio'
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5">
+                        <div className="w-4 h-4 rounded-full bg-[#00B074] flex items-center justify-center shrink-0 mt-0.5">
+                          <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
+                        </div>
+                        <span className="text-xs text-zinc-700 font-normal">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Sticky Details Footer */}
+            <div className="px-6 py-4 border-t border-[#F2F2F2] bg-white flex items-center justify-between gap-4 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+              <div>
+                <span className="block text-[#00B074] text-lg font-bold leading-none">
+                  {getCoursePriceAndCurrency(selectedCourseForDetails).symbol}
+                  {Number(getCoursePriceAndCurrency(selectedCourseForDetails).price).toLocaleString()}
+                </span>
+                <span className="text-[10px] text-zinc-400 font-normal mt-1 block">
+                  For your country
+                </span>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const courseScheds = schedulesMap[selectedCourseForDetails.id] || [];
+                  if (courseScheds.length > 0) {
+                    setChosenScheduleId(courseScheds[0].id);
+                  }
+                  setShowClassTimeSelector(true);
+                }}
+                className="flex-1 py-3.5 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-sm font-semibold transition-all text-center shadow-sm cursor-pointer active:scale-98"
+              >
+                Choose Class Time
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MAIN TAB 1: HOME / DISCOVERY */}
+        {activeTab === 'home' && (
+          <div className="flex-1 flex flex-col bg-white">
+            {/* Header branding row */}
+            <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5]">
+              <div className="flex items-center gap-2.5">
+                {/* Logo Brand Icon */}
+                <div className="w-8 h-8 rounded-lg bg-[#00B074] flex items-center justify-center text-white text-sm shadow-xs">
+                  <span className="font-bold text-base tracking-tighter">I</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs tracking-wider text-[#00B074] leading-tight">
+                    INGENIUM
+                  </span>
+                  <span className="font-semibold text-[8px] tracking-[0.16em] text-zinc-900 leading-none">
+                    TECH ACADEMY
+                  </span>
+                </div>
+              </div>
+
+              {/* Notification bell */}
+              <button 
+                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                className="p-2 rounded-full hover:bg-zinc-100 transition-colors relative"
+              >
+                <Bell className="w-4 h-4 text-black" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00B074]"></span>
+              </button>
+            </div>
+
+            {/* Scrollable home area */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              
+              {/* Greetings */}
+              <div className="space-y-1">
+                <h1 className="text-xl font-bold text-zinc-900 leading-tight">
+                  Hi, {currentUser.full_name?.split(' ')[0] || 'Sarah'}
+                </h1>
+                <p className="text-sm text-zinc-500 font-normal">
+                  What do you want to learn today?
+                </p>
+              </div>
+
+              {/* Course Search Form Container */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input 
+                    type="text"
+                    placeholder="Search courses"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-50 border border-zinc-200/80 rounded-xl font-normal text-zinc-800 focus:outline-none focus:border-[#00B074] placeholder:text-zinc-400"
+                  />
+                </div>
+                {/* Filter sliders button */}
+                <button 
+                  onClick={() => setSelectedCategoryId('')}
+                  className="p-2.5 rounded-xl bg-[#00B074] text-white hover:bg-[#00925F] transition-all flex items-center justify-center shrink-0 shadow-sm cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Categories Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900">Categories</h3>
+                  <button 
+                    onClick={() => setSelectedCategoryId('')}
+                    className="text-xs font-medium text-[#00B074] hover:underline cursor-pointer"
+                  >
+                    See all
+                  </button>
+                </div>
+
+                {/* Horizontal scrolling Categories layout exactly like reference */}
+                <div className="flex items-start gap-3.5 overflow-x-auto pb-2 pt-1 scrollbar-none">
+                  {/* "All Courses" category box */}
                   <button
+                    onClick={() => setSelectedCategoryId('')}
+                    className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer"
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                        !selectedCategoryId 
+                          ? 'bg-[#00B074] text-white shadow-xs' 
+                          : 'bg-[#F8F9FA] border border-zinc-200/80 text-zinc-700 hover:border-zinc-300'
+                      }`}
+                    >
+                      <SlidersHorizontal className={`w-6 h-6 stroke-[1.8] ${!selectedCategoryId ? 'text-white' : 'text-zinc-700'}`} />
+                    </div>
+                    <span className={`text-[11px] text-center leading-tight max-w-[68px] ${
+                      !selectedCategoryId ? 'font-semibold text-zinc-900' : 'font-medium text-zinc-600'
+                    }`}>
+                      All Courses
+                    </span>
+                  </button>
+
+                  {/* Rest of active categories: Data Science, Design, Marketing, Development */}
+                  {categories.map(cat => {
+                    const isSelected = selectedCategoryId === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        className="flex flex-col items-center gap-2 shrink-0 group cursor-pointer"
+                      >
+                        <div
+                          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                            isSelected 
+                              ? 'bg-[#00B074] text-white shadow-xs' 
+                              : 'bg-[#F8F9FA] border border-zinc-200/80 text-zinc-700 hover:border-zinc-300'
+                          }`}
+                        >
+                          {getCategoryIconElement(cat.name, isSelected)}
+                        </div>
+                        <span className={`text-[11px] text-center leading-tight max-w-[68px] ${
+                          isSelected ? 'font-semibold text-zinc-900' : 'font-medium text-zinc-600'
+                        }`}>
+                          {cat.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Popular Courses list area */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900">Popular Courses</h3>
+                  <button 
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedCategoryId('');
                     }}
-                    className="text-xs font-bold text-[#00B074] hover:underline cursor-pointer"
+                    className="text-xs font-medium text-[#00B074] hover:underline cursor-pointer"
                   >
-                    Reset Filters
+                    See all
+                  </button>
+                </div>
+
+                {filteredCourses.length === 0 ? (
+                  <div className="p-8 text-center bg-zinc-50 border border-zinc-100 rounded-3xl space-y-2">
+                    <AlertCircle className="w-8 h-8 text-zinc-300 mx-auto" />
+                    <p className="text-xs font-normal text-zinc-400">No courses available yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredCourses.map(course => {
+                      const pricingInfo = getCoursePriceAndCurrency(course);
+                      return (
+                        <div 
+                          key={course.id}
+                          onClick={() => setSelectedCourseForDetails(course)}
+                          className="bg-white border border-zinc-100 rounded-[20px] overflow-hidden shadow-xs hover:shadow-md transition-all cursor-pointer group"
+                        >
+                          {/* Top Image area with badges */}
+                          <div className="w-full aspect-[16/9] relative bg-zinc-50 overflow-hidden">
+                            <img 
+                              src={getCourseImage(course)} 
+                              alt={course.title} 
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+                              referrerPolicy="no-referrer"
+                            />
+                            {/* Floating category badge top left */}
+                            <span className="absolute top-3 left-3 bg-[#00B074] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs">
+                              {course.category || 'Technology'}
+                            </span>
+                            {/* Heart icon top right */}
+                            <button className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 shadow-xs text-zinc-700 hover:text-red-500">
+                              <Heart className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Details block */}
+                          <div className="p-4 space-y-1.5">
+                            <h4 className="text-sm font-semibold text-zinc-900 leading-snug">
+                              {course.title}
+                            </h4>
+                            <p className="text-xs text-zinc-500 font-normal leading-relaxed line-clamp-2">
+                              {getCourseDescription(course)}
+                            </p>
+                            
+                            {/* Stats bar */}
+                            <div className="flex items-center justify-between pt-1 text-xs text-zinc-500 font-normal">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-[#00B074]" />
+                                  <span>8 Weeks</span>
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <BarChart2 className="w-3.5 h-3.5 text-zinc-400" />
+                                  <span>Beginner</span>
+                                </span>
+                              </div>
+                              <span className="text-sm font-bold text-[#00B074]">
+                                {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* MAIN TAB 2: MY SELECTION */}
+        {activeTab === 'selections' && (
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between">
+              <h1 className="text-base font-semibold text-zinc-900">My Selection</h1>
+              <button className="p-2 rounded-full hover:bg-zinc-100">
+                <Bell className="w-4 h-4 text-zinc-800" />
+              </button>
+            </div>
+
+            {/* Segmented status filter tabs with underline indicator */}
+            <div className="px-6 border-b border-[#F0F0F0] flex gap-6">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'approved', label: 'Approved' },
+                { key: 'rejected', label: 'Rejected' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectionFilter(tab.key as any)}
+                  className={`py-3 text-xs font-medium transition-all relative cursor-pointer ${
+                    selectionFilter === tab.key 
+                      ? 'text-[#00B074] font-semibold' 
+                      : 'text-zinc-500 hover:text-zinc-800'
+                  }`}
+                >
+                  {tab.label}
+                  {selectionFilter === tab.key && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074] rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* List area */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {selections.filter(s => selectionFilter === 'all' ? true : s.status === selectionFilter).length === 0 ? (
+                <div className="p-8 text-center bg-zinc-50 border border-zinc-100 rounded-3xl space-y-2 mt-6">
+                  <Heart className="w-8 h-8 text-zinc-300 mx-auto" />
+                  <p className="text-xs font-normal text-zinc-400">You haven't selected any courses yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selections
+                    .filter(s => selectionFilter === 'all' ? true : s.status === selectionFilter)
+                    .map(sel => {
+                      const courseObj = courses.find(c => c.id === sel.course_id);
+                      return (
+                        <div key={sel.id} className="p-3.5 bg-white border border-[#EAEAEA] rounded-2xl flex items-center gap-3 relative shadow-xs">
+                          {/* Course square image left */}
+                          <div className="w-16 h-16 rounded-xl bg-zinc-100 overflow-hidden shrink-0">
+                            {courseObj && (
+                              <img 
+                                src={getCourseImage(courseObj)} 
+                                alt="" 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer"
+                              />
+                            )}
+                          </div>
+
+                          {/* Text middle */}
+                          <div className="flex-1 min-w-0 pr-6">
+                            <h4 className="text-xs font-semibold text-zinc-900 truncate">
+                              {sel.course_title || 'Course Selection'}
+                            </h4>
+                            <p className="text-[11px] text-zinc-500 font-normal mt-0.5 leading-snug">
+                              {sel.schedule_label || 'Awaiting schedule'}
+                            </p>
+                            
+                            {/* Status label exactly matching reference */}
+                            <div className="mt-1 flex items-center">
+                              <span className={`text-xs font-medium capitalize ${
+                                sel.status === 'approved' 
+                                  ? 'text-[#00875A]' 
+                                  : sel.status === 'rejected'
+                                  ? 'text-red-500'
+                                  : 'text-amber-500'
+                              }`}>
+                                {sel.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Price Snapshot on right */}
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-bold text-[#00B074]">
+                              {sel.currency_snapshot === 'NGN' ? '₦' : sel.currency_snapshot === 'EUR' ? '€' : '$'}
+                              {Number(sel.price_snapshot || 0).toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Red delete trash button top right */}
+                          {sel.status === 'pending' && (
+                            <button 
+                              onClick={() => handleDeleteSelection(sel.id)}
+                              className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                              title="Delete Selection"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Waiting Alert Box */}
+            <div className="p-4 mx-6 mb-6 bg-[#EAFBF3] border border-[#00B074]/30 rounded-2xl">
+              <p className="text-xs font-medium text-[#00875A] text-center leading-relaxed">
+                Your course selections are waiting for admin approval. You will be notified once a course is approved.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* MAIN TAB 3: MY LEARNING */}
+        {activeTab === 'learning' && (
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="px-6 py-4 border-b border-[#F5F5F5]">
+              <h1 className="text-base font-semibold text-zinc-900">My Learning</h1>
+            </div>
+
+            {/* List of active courses */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {enrollments.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 pt-20">
+                  {/* Graduation cap illustration with soft green circle and sparkles */}
+                  <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-[#EAFBF3]">
+                    <GraduationCap className="w-14 h-14 text-[#00875A]" />
+                    <Sparkles className="w-4 h-4 text-[#00B074] absolute top-2 right-4 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[#00B074] absolute bottom-3 left-4"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00B074]/60 absolute top-5 left-5"></span>
+                  </div>
+
+                  <div className="space-y-1.5 max-w-[280px]">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      You don't have any approved courses yet.
+                    </h3>
+                    <p className="text-xs text-zinc-500 font-normal leading-normal">
+                      Once your course selections are approved, you will see them here.
+                    </p>
+                  </div>
+
+                  <button 
+                    onClick={() => setActiveTab('home')}
+                    className="px-8 py-3 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-xs font-semibold shadow-sm transition-all active:scale-98 cursor-pointer"
+                  >
+                    Explore Courses
                   </button>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {filteredCourses.map(course => {
-                    const matchedSelection = getSelectionForCourse(course.id);
-                    const isEnrolled = isEnrolledInCourse(course.id);
-                    const courseScheds = schedulesMap[course.id] || [];
-                    const err = courseErrors[course.id];
-                    const pricingInfo = getCoursePriceAndCurrency(course);
-
+                <div className="space-y-4">
+                  {enrollments.map(enr => {
+                    const courseObj = courses.find(c => c.id === enr.course_id);
                     return (
-                      <div key={course.id} className="bg-zinc-900 border border-zinc-800/60 rounded-[24px] overflow-hidden p-4 space-y-4 shadow-lg relative group transition-all duration-300">
-                        {/* High-quality top Card Hero Image with category overlay */}
-                        <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800/80 relative shadow-inner">
-                          <img 
-                            src={getCourseImage(course)} 
-                            alt={course.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103" 
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80';
-                            }}
-                          />
-                          {course.category && (
-                            <span className="absolute top-3 left-3 bg-[#00B074] text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md">
-                              {course.category}
-                            </span>
-                          )}
+                      <div key={enr.id} className="p-4 border border-[#EAEAEA] rounded-2xl space-y-3 bg-white">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-zinc-100 overflow-hidden shrink-0">
+                            {courseObj && (
+                              <img 
+                                src={getCourseImage(courseObj)} 
+                                alt="" 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-zinc-900">
+                              {enr.course_title || 'Approved Course'}
+                            </h4>
+                            <p className="text-[11px] text-zinc-500 font-normal mt-0.5">
+                              {enr.schedule_label || 'Weekly Class'}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Text and visual info layout */}
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3 pt-0.5">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-base font-black text-white leading-snug tracking-tight">{course.title}</h3>
-                              <p className="text-[11px] text-zinc-400 font-bold mt-0.5 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                By {course.instructor_name || 'Shoun Paulk'}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0 bg-[#00B074]/10 border border-[#00B074]/20 rounded-xl px-2.5 py-1.5 flex flex-col items-center">
-                              <span className="text-sm font-black text-[#00B074]">
-                                {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
-                              </span>
-                              <span className="block text-[8px] text-zinc-400 font-black uppercase tracking-wider mt-0.5">
-                                {pricingInfo.currency}
-                              </span>
-                            </div>
+                        {/* Syllabus, syllabus notes, and active Classroom URL */}
+                        <div className="pt-2 border-t border-[#F5F5F5] space-y-2.5 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="font-normal text-zinc-500">Syllabus Complete</span>
+                            <span className="font-semibold text-[#00B074]">0%</span>
                           </div>
 
-                          <p className="text-xs text-zinc-300 leading-relaxed font-medium">
-                            {getCourseDescription(course)}
-                          </p>
-
-                          {/* Stats line with subtle icons */}
-                          <div className="flex items-center gap-3.5 text-[10px] text-zinc-400 font-extrabold border-y border-zinc-800/40 py-2.5 px-1 bg-zinc-950/25 rounded-xl">
-                            <span className="text-amber-400 flex items-center gap-1">
-                              <span className="text-xs">★</span> 4.9 (225 reviews)
-                            </span>
-                            <span className="text-zinc-600">•</span>
-                            <span className="flex items-center gap-1 text-emerald-400">
-                              <BookOpen className="w-3.5 h-3.5" /> 20 lessons
-                            </span>
-                            <span className="text-zinc-600">•</span>
-                            <span className="flex items-center gap-1 text-emerald-400">
-                              <Clock className="w-3.5 h-3.5" /> 4h 36m
-                            </span>
-                          </div>
-
-                          {/* Scheduling as Interactive Choice Chips instead of dull native HTML selects */}
-                          {!isEnrolled && !matchedSelection && courseScheds.length > 0 && (
-                            <div className="space-y-2 pt-1.5">
-                              <label className="block text-[9px] uppercase font-extrabold text-zinc-400 tracking-wider">
-                                Select preferred class schedule option
-                              </label>
-                              <div className={`grid gap-2 ${courseScheds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                {courseScheds.map(sch => {
-                                  const isSelected = selectedSchedules[course.id] === sch.id;
-                                  return (
-                                    <button
-                                      key={sch.id}
-                                      type="button"
-                                      onClick={() => setSelectedSchedules(prev => ({ ...prev, [course.id]: sch.id }))}
-                                      className={`py-2 px-3 rounded-xl border text-[10px] font-black transition-all text-center flex flex-col items-center justify-center gap-0.5 shadow-sm cursor-pointer ${
-                                        isSelected
-                                          ? 'bg-[#00B074] border-[#00905D] text-white'
-                                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
-                                      }`}
-                                    >
-                                      <span className="font-black">{sch.label}</span>
-                                      <span className={`text-[8px] font-bold ${isSelected ? 'text-emerald-100' : 'text-zinc-500'}`}>
-                                        {sch.day_of_week}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {err && (
-                            <p className="text-xs font-bold text-red-400 bg-red-950/20 p-2.5 rounded-xl border border-red-900/40 mt-2">
-                              {err}
+                          <div className="p-3 bg-zinc-50 rounded-xl space-y-1">
+                            <p className="font-medium text-zinc-900">Class curriculum and video logs</p>
+                            <p className="text-[11px] text-zinc-500 font-normal leading-relaxed">
+                              Live classes and material links will be posted here by your assigned instructor.
                             </p>
-                          )}
-
-                          {/* Selection Actions */}
-                          <div className="pt-2">
-                            {isEnrolled ? (
-                              <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-[#00B074] text-xs font-black text-center flex items-center justify-center gap-1.5">
-                                <CheckCircle className="w-4 h-4" />
-                                Active Enrollment
-                              </div>
-                            ) : matchedSelection ? (
-                              <div className="w-full py-2.5 px-4 rounded-xl bg-amber-950/20 border border-amber-500/20 text-amber-400 text-xs font-black text-center flex items-center justify-between">
-                                <span className="font-extrabold">Selection Requested</span>
-                                <span className="text-[9px] uppercase font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10">
-                                  {matchedSelection.status}
-                                </span>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleSelectCourse(course.id)}
-                                className="w-full py-3 px-4 rounded-xl bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-black border border-emerald-600/20 shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                              >
-                                <Plus className="w-4 h-4" />
-                                Add to My Selection
-                              </button>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -701,256 +934,250 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 </div>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* TAB 3: MY LEARNING */}
-          {activeTab === 'learning' && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">My Learning</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Access your course curriculums, class schedules, and live sessions.
-                </p>
+        {/* MAIN TAB 4: PROFILE */}
+        {activeTab === 'profile' && (
+          <div className="flex-1 flex flex-col bg-white">
+            
+            {/* Elegant Solid green top card */}
+            <div className="bg-[#00B074] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs">
+              <h2 className="text-sm font-semibold uppercase tracking-wider">Student Profile</h2>
+              
+              {/* User photo matching Screen 6 */}
+              <div className="relative w-20 h-20 mx-auto">
+                <div className="w-full h-full rounded-full border-3 border-white overflow-hidden bg-white shadow-xs flex items-center justify-center">
+                  <img 
+                    src={currentUser.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"} 
+                    alt={currentUser.full_name || 'Profile'}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                {/* Green pencil edit button on lower right */}
+                <button className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#00B074] text-white shadow-sm border-2 border-white hover:scale-105 transition-transform cursor-pointer">
+                  <Pencil className="w-3 h-3 stroke-[2.5]" />
+                </button>
               </div>
 
-              {enrollments.length === 0 ? (
-                <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl text-center space-y-3 my-8">
-                  <div className="inline-flex p-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-zinc-500">
-                    <GraduationCap className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white">You haven't enrolled in any courses yet.</h3>
-                  <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                    Once the administrator approves your selected courses after confirming payment through WhatsApp, your active enrollments will appear here instantly.
-                  </p>
-                  <button 
-                    onClick={() => setActiveTab('courses')}
-                    className="py-2 px-5 rounded-xl bg-[#00B074] text-white font-bold text-xs border border-zinc-800 cursor-pointer inline-flex items-center gap-1"
-                  >
-                    Browse Courses Catalog
-                  </button>
+              {/* Identity labels */}
+              <div className="space-y-0.5">
+                <h3 className="text-base font-semibold tracking-tight text-white">
+                  {currentUser.full_name || currentUser.email?.split('@')[0] || 'Student'}
+                </h3>
+                <p className="text-xs text-emerald-100 font-normal">{currentUser.email}</p>
+              </div>
+            </div>
+
+            {/* Read-Only demographic card details (matching Screen 6) */}
+            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+              <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden divide-y divide-[#F5F5F5] shadow-xs">
+                <div className="p-3.5 flex items-center justify-between text-xs">
+                  <span className="font-normal text-zinc-500">Country</span>
+                  <span className="font-semibold text-zinc-900 flex items-center gap-1.5">
+                    {currentUser.country || 'Nigeria'}
+                    <span>🇳🇬</span>
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {enrollments.map(enr => (
-                    <div key={enr.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 relative">
-                      
-                      {/* Active course header */}
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-955/30 text-[#00B074] border border-emerald-900/30">
-                            Active Access
-                          </span>
-                          <h3 className="text-base font-black text-white leading-snug mt-1.5">{enr.course_title}</h3>
-                          <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-semibold mt-1">
-                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{enr.schedule_label || 'Standard schedule'}</span>
-                          </div>
-                        </div>
-                        <div className="w-12 h-12 bg-zinc-950 rounded-2xl border border-zinc-800 flex items-center justify-center font-black text-xl text-[#00B074]">
-                          {enr.course_title?.charAt(0)}
-                        </div>
-                      </div>
-
-                      {/* Course progress framework */}
-                      <div className="space-y-2.5 pt-2 border-t border-zinc-800">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-zinc-400">Curriculum Syllabus</span>
-                          <span className="font-extrabold text-[#00B074]">0% Complete</span>
-                        </div>
-                        
-                        {/* Empty course syllabus model */}
-                        <div className="p-3.5 bg-zinc-950 border border-zinc-850 rounded-xl space-y-2">
-                          <p className="text-xs font-bold text-zinc-300">Syllabus modules coming soon</p>
-                          <p className="text-[11px] text-zinc-500 leading-normal">
-                            Your live classrooms, curriculum content, and modules will be populated by your assigned instructor prior to the first class.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Live meeting invitation placeholder */}
-                      <div className="p-3 bg-emerald-955/10 border border-emerald-900/20 rounded-xl flex items-center justify-between text-xs font-semibold">
-                        <span className="text-zinc-300">Live Classroom Session Link</span>
-                        <span className="text-[10px] text-[#00B074] uppercase tracking-wider font-bold">Awaiting schedule</span>
-                      </div>
-
+                <div className="p-3.5 flex items-center justify-between text-xs">
+                  <span className="font-normal text-zinc-500">Time Zone</span>
+                  <span className="font-semibold text-zinc-900">{currentUser.timezone || 'Africa/Lagos (GMT+1)'}</span>
+                </div>
+                <div className="p-3.5 flex items-center justify-between text-xs">
+                  <span className="font-normal text-zinc-500">Email</span>
+                  <span className="font-semibold text-zinc-700 truncate max-w-[180px]">{currentUser.email}</span>
+                </div>
+                <div className="p-3.5 flex items-center justify-between text-xs">
+                  <span className="font-normal text-zinc-500">Phone</span>
+                  {currentUser.phone && currentUser.phone.trim() !== '' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-zinc-900">{currentUser.phone}</span>
+                      <button 
+                        onClick={() => {
+                          setPhoneInput(currentUser.phone || '');
+                          setPhoneError(null);
+                          setIsAddingPhone(true);
+                        }}
+                        className="text-zinc-400 hover:text-[#00B074] transition-colors p-0.5 cursor-pointer"
+                        title="Edit Phone"
+                        aria-label="Edit Phone Number"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: PROFILE */}
-          {activeTab === 'profile' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-black text-white tracking-tight font-sans">Student Profile</h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Manage your personal demographics, communication details, and timezone.
-                </p>
-              </div>
-
-              {/* Success Notification */}
-              {profileSuccess && (
-                <div className="p-3.5 bg-emerald-955/20 border border-emerald-900/50 rounded-xl text-xs font-semibold text-[#00B074] flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00B074] shrink-0" />
-                  <span>Profile updated successfully!</span>
-                </div>
-              )}
-
-              {/* Error Notification */}
-              {profileError && (
-                <div className="p-3.5 bg-red-955/20 border border-red-900/50 rounded-xl text-xs font-semibold text-red-400 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                  <span>{profileError}</span>
-                </div>
-              )}
-
-              {/* Profile Demographic Form */}
-              <form onSubmit={handleUpdateProfileSubmit} className="space-y-4">
-                
-                {/* Full Name */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-zinc-400">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="text"
-                      required
-                      value={profileForm.full_name}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, full_name: e.target.value }))}
-                      className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white focus:outline-none focus:border-[#00B074]"
-                    />
-                  </div>
-                </div>
-
-                {/* Email Address (Disabled) */}
-                <div className="space-y-1.5 opacity-70">
-                  <label className="block text-xs font-bold text-zinc-500">Email Address (Fixed)</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                    <input
-                      type="email"
-                      disabled
-                      value={currentUser.email}
-                      className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-950 border border-zinc-900 rounded-xl font-bold text-zinc-500 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-zinc-400">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="tel"
-                      value={profileForm.phone}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
-                      className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white focus:outline-none focus:border-[#00B074]"
-                    />
-                  </div>
-                </div>
-
-                {/* Country */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-zinc-400">Country</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="text"
-                      value={profileForm.country}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, country: e.target.value }))}
-                      className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white focus:outline-none focus:border-[#00B074]"
-                    />
-                  </div>
-                </div>
-
-                {/* Timezone (IANA selection dropdown) */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-zinc-400">Timezone (IANA)</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <select
-                      value={profileForm.timezone}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, timezone: e.target.value }))}
-                      className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white cursor-pointer focus:outline-none focus:border-[#00B074]"
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setPhoneInput('');
+                        setPhoneError(null);
+                        setIsAddingPhone(true);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EAFBF3] hover:bg-[#00B074]/20 text-[#00875A] font-semibold text-xs transition-colors cursor-pointer active:scale-95"
+                      aria-label="Add Phone Number"
                     >
-                      <option value="Africa/Lagos">Africa/Lagos (West Africa Time)</option>
-                      <option value="Europe/London">Europe/London (GMT/BST)</option>
-                      <option value="America/New_York">America/New_York (EST/EDT)</option>
-                      <option value="America/Chicago">America/Chicago (CST/CDT)</option>
-                      <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                    </select>
-                  </div>
+                      <Plus className="w-3 h-3 stroke-[2.5]" />
+                      <span>Add</span>
+                    </button>
+                  )}
                 </div>
+              </div>
 
-                {/* Submit Profile */}
-                <button
-                  type="submit"
-                  className="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-100 text-black font-extrabold text-xs shadow-lg active:translate-y-0.5 transition-all cursor-pointer"
-                >
-                  Save Profile Changes
-                </button>
-              </form>
+              {/* Option Rows Menu list matching Screen 6 */}
+              <div className="space-y-2.5">
+                {[
+                  { label: 'Settings', icon: <Settings className="w-4 h-4 text-zinc-500" /> },
+                  { label: 'Help & Support', icon: <HelpCircle className="w-4 h-4 text-zinc-500" /> },
+                  { label: 'About Ingenium Tech Academy', icon: <Info className="w-4 h-4 text-zinc-500" /> },
+                ].map((row, idx) => (
+                  <button 
+                    key={idx}
+                    className="w-full p-3.5 bg-white border border-[#EAEAEA] rounded-xl flex items-center justify-between hover:border-zinc-300 transition-colors text-xs font-medium text-zinc-800 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      {row.icon}
+                      <span>{row.label}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-400" />
+                  </button>
+                ))}
 
-              {/* Account Signout */}
-              <div className="pt-6 border-t border-zinc-850">
-                <button
+                {/* Account Logout with red styling matching Screen 6 */}
+                <button 
                   onClick={onLogout}
-                  className="w-full py-2.5 rounded-xl bg-red-955/20 hover:bg-red-955/40 text-red-400 font-bold text-xs border border-red-900/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full p-3.5 bg-white border border-[#EAEAEA] rounded-xl flex items-center justify-between hover:border-red-200 hover:bg-red-50/20 transition-colors text-xs font-semibold text-red-500 mt-2 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out Account
+                  <div className="flex items-center gap-3">
+                    <LogOut className="w-4 h-4 text-red-500" />
+                    <span>Logout</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400" />
                 </button>
               </div>
+
             </div>
-          )}
+          </div>
+        )}
 
-        </main>
-
-        {/* Floating Green Pill Taskbar (Mockup Style) */}
-        <nav className="sticky bottom-4 mx-4 mb-4 bg-[#008B5C] border border-emerald-600/30 rounded-2xl shadow-xl py-3 px-5 flex items-center justify-around z-30 text-white">
+        {/* STICKY BOTTOM TASKBAR - Matching bottom navigation look of reference */}
+        <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2.5 px-6 flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+          
           <button
             onClick={() => setActiveTab('home')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'home' ? 'text-white scale-105 font-black' : 'text-emerald-200/80 hover:text-white'
+              activeTab === 'home' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px] tracking-wider font-extrabold">Home</span>
+            <HomeIcon className={`w-5 h-5 stroke-[2] ${activeTab === 'home' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">Home</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('courses')}
+            onClick={() => setActiveTab('selections')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'courses' ? 'text-white scale-105 font-black' : 'text-emerald-200/80 hover:text-white'
+              activeTab === 'selections' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <BookOpen className="w-5 h-5" />
-            <span className="text-[10px] tracking-wider font-extrabold">Courses</span>
+            <Heart className={`w-5 h-5 stroke-[2] ${activeTab === 'selections' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">My Selection</span>
           </button>
 
           <button
             onClick={() => setActiveTab('learning')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'learning' ? 'text-white scale-105 font-black' : 'text-emerald-200/80 hover:text-white'
+              activeTab === 'learning' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <GraduationCap className="w-5 h-5" />
-            <span className="text-[10px] tracking-wider font-extrabold">Learning</span>
+            <BookOpen className={`w-5 h-5 stroke-[2] ${activeTab === 'learning' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">My Learning</span>
           </button>
 
           <button
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'profile' ? 'text-white scale-105 font-black' : 'text-emerald-200/80 hover:text-white'
+              activeTab === 'profile' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <User className="w-5 h-5" />
-            <span className="text-[10px] tracking-wider font-extrabold">Profile</span>
+            <User className={`w-5 h-5 stroke-[2] ${activeTab === 'profile' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">Profile</span>
           </button>
+          
         </nav>
+
+        {/* Phone Number Modal Dialog */}
+        {isAddingPhone && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-zinc-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-[#EAFBF3] text-[#00B074]">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-zinc-900">
+                    {currentUser.phone ? 'Update Phone Number' : 'Add Phone Number'}
+                  </h3>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsAddingPhone(false);
+                    setPhoneError(null);
+                  }}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-zinc-500 font-normal leading-relaxed">
+                Provide your WhatsApp-enabled phone number to receive class schedules, direct tutor updates, and live session links.
+              </p>
+
+              <form onSubmit={handleSavePhone} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-zinc-700">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <input
+                      type="tel"
+                      autoFocus
+                      placeholder="e.g. +234 803 123 4567"
+                      value={phoneInput}
+                      onChange={(e) => {
+                        setPhoneInput(e.target.value);
+                        setPhoneError(null);
+                      }}
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-zinc-50 border border-zinc-200 rounded-xl font-medium text-zinc-900 focus:outline-none focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30"
+                    />
+                  </div>
+                  {phoneError && (
+                    <p className="text-[11px] text-red-500 font-medium">{phoneError}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingPhone(false);
+                      setPhoneError(null);
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-200 text-zinc-700 text-xs font-semibold hover:bg-zinc-50 cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPhone || !phoneInput.trim()}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer transition-all active:scale-98 flex items-center justify-center gap-1.5"
+                  >
+                    {savingPhone ? 'Saving...' : 'Save Phone'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

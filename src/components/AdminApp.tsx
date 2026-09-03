@@ -69,6 +69,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
     eur_price: 120
   });
 
+  const [showInlineCreateCat, setShowInlineCreateCat] = useState(false);
+  const [inlineCategoryName, setInlineCategoryName] = useState('');
+
   // Hero Image storage helper states
   const [createHeroFile, setCreateHeroFile] = useState<File | null>(null);
   const [createHeroPreview, setCreateHeroPreview] = useState<string>('');
@@ -186,13 +189,35 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
     try {
       const slug = newCourse.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
       
-      // 1. Create the base course
+      // 1. Determine category ID & name
+      let categoryId = newCourse.category_id;
+      let categoryName = '';
+
+      if (showInlineCreateCat && inlineCategoryName.trim()) {
+        const catSlug = inlineCategoryName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+        const createdCat = await dataService.categories.createCategory({
+          name: inlineCategoryName.trim(),
+          slug: catSlug,
+          is_active: true
+        });
+        categoryId = createdCat.id;
+        categoryName = createdCat.name;
+        // Refresh categories
+        const updatedCats = await dataService.categories.getCategories();
+        setCategories(updatedCats);
+      } else if (categoryId) {
+        const catObj = categories.find(c => c.id === categoryId);
+        categoryName = catObj?.name || '';
+      }
+
+      // 2. Create the base course
       const createdCourse = await dataService.courses.createCourse({
         title: newCourse.title.trim(),
         slug,
         short_description: newCourse.short_description.trim(),
         description: newCourse.description.trim(),
-        category_id: newCourse.category_id || undefined,
+        category_id: categoryId || undefined,
+        category: categoryName || undefined,
         duration: newCourse.duration,
         training_mode: newCourse.training_mode,
         status: newCourse.status,
@@ -202,13 +227,13 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
 
       let finalImageUrl = '';
       if (createHeroFile) {
-        // 2. Upload Hero Image to Supabase Storage if file exists
+        // 3. Upload Hero Image to Supabase Storage if file exists
         finalImageUrl = await dataService.courses.uploadHeroImage(createdCourse.id, createHeroFile);
         // Update the course with the uploaded image URL
         await dataService.courses.updateCourse(createdCourse.id, { image_url: finalImageUrl });
       }
 
-      // 3. Set pricing row
+      // 4. Set pricing row
       await dataService.pricing.updatePricing({
         course_id: createdCourse.id,
         usd_price: Number(newCourse.usd_price || 0),
@@ -228,6 +253,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
         ngn_price: 120000,
         eur_price: 120
       });
+      setShowInlineCreateCat(false);
+      setInlineCategoryName('');
       setCreateHeroFile(null);
       setCreateHeroPreview('');
       loadAdminData();
@@ -270,12 +297,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
       }
 
       // 1. Update Base Course
+      const selectedCat = categories.find(c => c.id === editForm.category_id);
       await dataService.courses.updateCourse(editingCourse.id, {
         title: editForm.title.trim(),
         slug,
         short_description: editForm.short_description.trim(),
         description: editForm.description.trim(),
         category_id: editForm.category_id || undefined,
+        category: selectedCat?.name || undefined,
         duration: editForm.duration,
         training_mode: editForm.training_mode,
         status: editForm.status,
@@ -954,17 +983,55 @@ export const AdminApp: React.FC<AdminAppProps> = ({ currentUser, onLogout, theme
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase font-extrabold text-zinc-400 mb-1">Category</label>
-                        <select
-                          value={newCourse.category_id}
-                          onChange={(e) => setNewCourse(prev => ({ ...prev, category_id: e.target.value }))}
-                          className="w-full p-2.5 bg-zinc-950 border border-zinc-800 text-white rounded-lg font-bold focus:outline-none focus:border-[#00B074]"
-                        >
-                          <option value="">-- Choose Category --</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] uppercase font-extrabold text-zinc-400">
+                            Course Category <span className="text-[#00B074]">*</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowInlineCreateCat(!showInlineCreateCat);
+                              setInlineCategoryName('');
+                            }}
+                            className="text-[10px] text-[#00B074] hover:underline font-bold cursor-pointer"
+                          >
+                            {showInlineCreateCat ? '← Select Existing' : '+ Add New Category'}
+                          </button>
+                        </div>
+
+                        {showInlineCreateCat ? (
+                          <div className="space-y-1">
+                            <input
+                              type="text"
+                              required
+                              placeholder="E.g. Development, Data Science, AI, Design..."
+                              value={inlineCategoryName}
+                              onChange={(e) => setInlineCategoryName(e.target.value)}
+                              className="w-full p-2.5 bg-zinc-950 border border-[#00B074] text-white rounded-lg font-semibold focus:outline-none focus:ring-1 focus:ring-[#00B074]"
+                            />
+                            <p className="text-[9px] text-zinc-500 font-semibold">New category will be automatically created and assigned to this course.</p>
+                          </div>
+                        ) : (
+                          <select
+                            required
+                            value={newCourse.category_id}
+                            onChange={(e) => {
+                              if (e.target.value === '__add_new__') {
+                                setShowInlineCreateCat(true);
+                                setInlineCategoryName('');
+                              } else {
+                                setNewCourse(prev => ({ ...prev, category_id: e.target.value }));
+                              }
+                            }}
+                            className="w-full p-2.5 bg-zinc-950 border border-zinc-800 text-white rounded-lg font-bold focus:outline-none focus:border-[#00B074] cursor-pointer"
+                          >
+                            <option value="">-- Choose Category (e.g. Development, Design...) --</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                            <option value="__add_new__">+ Create New Category...</option>
+                          </select>
+                        )}
                       </div>
 
                       {/* Course Hero Image Upload/Preview */}

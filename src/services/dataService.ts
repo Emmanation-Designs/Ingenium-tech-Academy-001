@@ -31,6 +31,278 @@ const setLocalSession = (profile: Profile | null): void => {
   }
 };
 
+interface SelectionSnapshotMeta {
+  price_snapshot?: number;
+  currency_snapshot?: string;
+  student_country?: string;
+}
+
+const getSelectionMetaMap = (): Record<string, SelectionSnapshotMeta> => {
+  try {
+    const raw = localStorage.getItem('ingenium_selection_meta');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveSelectionMeta = (idOrRef: string, meta: SelectionSnapshotMeta): void => {
+  try {
+    const map = getSelectionMetaMap();
+    map[idOrRef] = { ...map[idOrRef], ...meta };
+    localStorage.setItem('ingenium_selection_meta', JSON.stringify(map));
+  } catch {
+    // Ignore storage quota errors
+  }
+};
+
+// ====================================================================
+// ====================================================================
+// Default Catalog Data (Data Science, Design, Marketing, Development)
+// ====================================================================
+
+export const isValidUUID = (id?: string | null): boolean => {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
+
+export const generateValidUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // fallback
+    }
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+export const LEGACY_ID_TO_UUID: Record<string, string> = {
+  'course-fullstack-dev': 'c0000001-0000-4000-8000-000000000001',
+  'course-data-science': 'c0000001-0000-4000-8000-000000000002',
+  'course-ui-ux-design': 'c0000001-0000-4000-8000-000000000003',
+  'course-digital-marketing': 'c0000001-0000-4000-8000-000000000004',
+  'sched-dev-weekend': 's0000001-0000-4000-8000-000000000001',
+  'sched-dev-weekday': 's0000001-0000-4000-8000-000000000002',
+  'sched-ds-weekend': 's0000001-0000-4000-8000-000000000003',
+  'sched-design-weekend': 's0000001-0000-4000-8000-000000000004',
+  'sched-mkt-weekday': 's0000001-0000-4000-8000-000000000005',
+  'cat-development': 'd0000001-0000-4000-8000-000000000001',
+  'cat-data-science': 'd0000001-0000-4000-8000-000000000002',
+  'cat-design': 'd0000001-0000-4000-8000-000000000003',
+  'cat-marketing': 'd0000001-0000-4000-8000-000000000004',
+  'price-dev-1': 'p0000001-0000-4000-8000-000000000001',
+  'price-ds-1': 'p0000001-0000-4000-8000-000000000002',
+  'price-design-1': 'p0000001-0000-4000-8000-000000000003',
+  'price-mkt-1': 'p0000001-0000-4000-8000-000000000004',
+};
+
+export const normalizeToUUID = (id?: string | null): string | undefined => {
+  if (!id) return undefined;
+  return LEGACY_ID_TO_UUID[id] || id;
+};
+
+export const DEFAULT_CATEGORIES: CourseCategory[] = [
+  {
+    id: 'd0000001-0000-4000-8000-000000000002',
+    name: 'Data Science',
+    slug: 'data-science',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'd0000001-0000-4000-8000-000000000003',
+    name: 'Design',
+    slug: 'design',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'd0000001-0000-4000-8000-000000000004',
+    name: 'Marketing',
+    slug: 'marketing',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'd0000001-0000-4000-8000-000000000001',
+    name: 'Development',
+    slug: 'development',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  }
+];
+
+export const DEFAULT_COURSES: Course[] = [
+  {
+    id: 'c0000001-0000-4000-8000-000000000001',
+    title: 'Full Stack Web Development',
+    slug: 'full-stack-web-development',
+    short_description: 'Master React, TypeScript, Node.js, and modern cloud deployment pipelines from scratch.',
+    description: 'A comprehensive, industry-grade training program designed to take you from fundamentals to deploying full-scale, scalable web applications with React, Node.js, and modern cloud infrastructure.',
+    category_id: 'd0000001-0000-4000-8000-000000000001',
+    category: 'Development',
+    duration: '12 weeks',
+    training_mode: 'online',
+    status: 'published',
+    is_published: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    pricing: {
+      id: 'p0000001-0000-4000-8000-000000000001',
+      course_id: 'c0000001-0000-4000-8000-000000000001',
+      ngn_price: 250000,
+      usd_price: 500,
+      eur_price: 450,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    }
+  },
+  {
+    id: 'c0000001-0000-4000-8000-000000000002',
+    title: 'Data Science & Machine Learning',
+    slug: 'data-science-machine-learning',
+    short_description: 'Analyze data, build predictive models with Python, Pandas, Scikit-Learn, and SQL.',
+    description: 'Learn modern data science from top practitioners. Covers exploratory data analysis, statistical methods, machine learning models, and real-world business forecasting.',
+    category_id: 'd0000001-0000-4000-8000-000000000002',
+    category: 'Data Science',
+    duration: '10 weeks',
+    training_mode: 'hybrid',
+    status: 'published',
+    is_published: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    pricing: {
+      id: 'p0000001-0000-4000-8000-000000000002',
+      course_id: 'c0000001-0000-4000-8000-000000000002',
+      ngn_price: 220000,
+      usd_price: 450,
+      eur_price: 400,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    }
+  },
+  {
+    id: 'c0000001-0000-4000-8000-000000000003',
+    title: 'UI/UX Product Design Masterclass',
+    slug: 'ui-ux-product-design-masterclass',
+    short_description: 'Create human-centered products, design systems, and clickable prototypes in Figma.',
+    description: 'Master user research, wireframing, high-fidelity UI design, prototyping, and design systems for mobile and web apps using Figma.',
+    category_id: 'd0000001-0000-4000-8000-000000000003',
+    category: 'Design',
+    duration: '8 weeks',
+    training_mode: 'online',
+    status: 'published',
+    is_published: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    pricing: {
+      id: 'p0000001-0000-4000-8000-000000000003',
+      course_id: 'c0000001-0000-4000-8000-000000000003',
+      ngn_price: 180000,
+      usd_price: 350,
+      eur_price: 320,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    }
+  },
+  {
+    id: 'c0000001-0000-4000-8000-000000000004',
+    title: 'Digital Marketing & Growth Mastery',
+    slug: 'digital-marketing-growth-mastery',
+    short_description: 'Scale brands with performance advertising, search engine optimization, and conversion funnels.',
+    description: 'Learn growth marketing, Google Ads, Meta Ads, SEO optimization, and data-driven conversion strategies to drive measurable customer acquisition.',
+    category_id: 'd0000001-0000-4000-8000-000000000004',
+    category: 'Marketing',
+    duration: '6 weeks',
+    training_mode: 'online',
+    status: 'published',
+    is_published: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    pricing: {
+      id: 'p0000001-0000-4000-8000-000000000004',
+      course_id: 'c0000001-0000-4000-8000-000000000004',
+      ngn_price: 150000,
+      usd_price: 300,
+      eur_price: 270,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    }
+  }
+];
+
+export const DEFAULT_SCHEDULES: CourseSchedule[] = [
+  {
+    id: 's0000001-0000-4000-8000-000000000001',
+    course_id: 'c0000001-0000-4000-8000-000000000001',
+    label: 'Weekend Intensive',
+    day_of_week: 'Saturday & Sunday',
+    start_time: '10:00 AM',
+    end_time: '01:00 PM',
+    timezone: 'WAT',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 's0000001-0000-4000-8000-000000000002',
+    course_id: 'c0000001-0000-4000-8000-000000000001',
+    label: 'Weekday Evening',
+    day_of_week: 'Tuesday & Thursday',
+    start_time: '06:00 PM',
+    end_time: '08:30 PM',
+    timezone: 'WAT',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 's0000001-0000-4000-8000-000000000003',
+    course_id: 'c0000001-0000-4000-8000-000000000002',
+    label: 'Saturday Morning Cohort',
+    day_of_week: 'Saturday',
+    start_time: '09:00 AM',
+    end_time: '01:00 PM',
+    timezone: 'WAT',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 's0000001-0000-4000-8000-000000000004',
+    course_id: 'c0000001-0000-4000-8000-000000000003',
+    label: 'Weekend Masterclass',
+    day_of_week: 'Saturday',
+    start_time: '11:00 AM',
+    end_time: '02:00 PM',
+    timezone: 'WAT',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  },
+  {
+    id: 's0000001-0000-4000-8000-000000000005',
+    course_id: 'c0000001-0000-4000-8000-000000000004',
+    label: 'Evening Cohort',
+    day_of_week: 'Wednesday & Friday',
+    start_time: '06:30 PM',
+    end_time: '08:30 PM',
+    timezone: 'WAT',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
+  }
+];
+
 // ====================================================================
 // Core Data Service
 // ====================================================================
@@ -130,7 +402,7 @@ export const dataService = {
         ].includes(email.toLowerCase());
 
         const newProfile: Profile = {
-          id: `local-uuid-${Date.now()}`,
+          id: generateValidUUID(),
           full_name: fullName,
           email: email.toLowerCase(),
           phone: phone || '',
@@ -362,15 +634,39 @@ export const dataService = {
   // 3. COURSE CATEGORIES SERVICES
   categories: {
     async getCategories(): Promise<CourseCategory[]> {
+      let result: CourseCategory[] = [];
       if (isSupabaseConfigured && supabase) {
-        const { data } = await supabase
-          .from('course_categories')
-          .select('*')
-          .order('name', { ascending: true });
-        return (data as CourseCategory[]) || [];
+        try {
+          const { data } = await supabase
+            .from('course_categories')
+            .select('*')
+            .order('name', { ascending: true });
+          result = (data as CourseCategory[]) || [];
+        } catch {
+          result = [];
+        }
       } else {
-        return getLocalData<CourseCategory>('categories');
+        result = getLocalData<CourseCategory>('categories');
       }
+
+      // Merge with DEFAULT_CATEGORIES so standard categories (Data Science, Design, Marketing, Development) are ALWAYS present
+      if (!result || result.length === 0) {
+        result = [...DEFAULT_CATEGORIES];
+        if (!isSupabaseConfigured) {
+          setLocalData('categories', DEFAULT_CATEGORIES);
+        }
+      } else {
+        const existingNames = new Set(result.map(c => c.name.toLowerCase().trim()));
+        const missing = DEFAULT_CATEGORIES.filter(d => !existingNames.has(d.name.toLowerCase().trim()));
+        if (missing.length > 0) {
+          result = [...result, ...missing];
+          if (!isSupabaseConfigured) {
+            setLocalData('categories', result);
+          }
+        }
+      }
+
+      return result;
     },
 
     async createCategory(category: Omit<CourseCategory, 'id' | 'created_at' | 'updated_at'>): Promise<CourseCategory> {
@@ -386,7 +682,7 @@ export const dataService = {
         const categories = getLocalData<CourseCategory>('categories');
         const newCategory: CourseCategory = {
           ...category,
-          id: `category-uuid-${Date.now()}`,
+          id: generateValidUUID(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -447,17 +743,25 @@ export const dataService = {
   // 4. COURSE PRICING SERVICES
   pricing: {
     async getPricingForCourse(courseId: string): Promise<CoursePricing | null> {
-      if (isSupabaseConfigured && supabase) {
-        const { data } = await supabase
-          .from('course_pricing')
-          .select('*')
-          .eq('course_id', courseId)
-          .maybeSingle();
-        return data as CoursePricing | null;
-      } else {
-        const pricings = getLocalData<CoursePricing>('course_pricing');
-        return pricings.find(p => p.course_id === courseId) || null;
+      const normalizedCourseId = normalizeToUUID(courseId) || courseId;
+      if (isSupabaseConfigured && supabase && isValidUUID(normalizedCourseId)) {
+        try {
+          const { data } = await supabase
+            .from('course_pricing')
+            .select('*')
+            .eq('course_id', normalizedCourseId)
+            .maybeSingle();
+          if (data) return data as CoursePricing;
+        } catch {
+          // fall through to local/default lookup
+        }
       }
+      const pricings = getLocalData<CoursePricing>('course_pricing');
+      const foundLocal = pricings.find(p => p.course_id === normalizedCourseId || p.course_id === courseId);
+      if (foundLocal) return foundLocal;
+
+      const defaultMatch = DEFAULT_COURSES.find(c => c.id === normalizedCourseId || c.id === courseId);
+      return defaultMatch?.pricing || null;
     },
 
     async updatePricing(pricing: Omit<CoursePricing, 'id' | 'created_at' | 'updated_at'> | Partial<CoursePricing> & { course_id: string }): Promise<CoursePricing> {
@@ -476,7 +780,7 @@ export const dataService = {
         if (index === -1) {
           const newPricing: CoursePricing = {
             ...pricing,
-            id: `pricing-uuid-${Date.now()}`,
+            id: generateValidUUID(),
             created_at: now,
             updated_at: now
           } as CoursePricing;
@@ -501,31 +805,112 @@ export const dataService = {
   courses: {
     async getCourses(): Promise<Course[]> {
       if (isSupabaseConfigured && supabase) {
-        const { data } = await supabase
-          .from('courses')
-          .select(`
-            *,
-            pricing:course_pricing(*),
-            category_relation:course_categories(name)
-          `)
-          .order('title', { ascending: true });
-        
-        return ((data || []) as any[]).map(c => ({
-          ...c,
-          category: c.category_relation?.name || c.category || 'Uncategorized',
-          pricing: c.pricing?.[0] || c.pricing || undefined // Supabase returns single row, but occasionally arrays depending on relation mapping. Handle both.
-        })) as Course[];
+        try {
+          // 1. Fetch courses table directly (independent of PostgREST relational foreign key schema cache)
+          let coursesData: any[] = [];
+          try {
+            const { data, error } = await supabase
+              .from('courses')
+              .select('*')
+              .order('title', { ascending: true });
+            if (!error && data && data.length > 0) {
+              coursesData = data;
+            }
+          } catch {
+            coursesData = [];
+          }
+
+          // If no courses found in database, return the complete default catalog
+          if (coursesData.length === 0) {
+            return DEFAULT_COURSES;
+          }
+
+          // 2. Fetch pricing table safely in parallel (without schema cache join dependency)
+          let pricingData: CoursePricing[] = [];
+          try {
+            const { data: pData } = await supabase
+              .from('course_pricing')
+              .select('*');
+            if (pData && Array.isArray(pData)) {
+              pricingData = pData as CoursePricing[];
+            }
+          } catch {
+            pricingData = [];
+          }
+
+          // 3. Fetch categories mapping safely
+          let categories: CourseCategory[] = [];
+          try {
+            categories = await dataService.categories.getCategories();
+          } catch {
+            categories = DEFAULT_CATEGORIES;
+          }
+          const catMap = new Map<string, string>();
+          for (const cat of categories) {
+            if (cat.id && cat.name) catMap.set(cat.id, cat.name);
+          }
+
+          const localPricings = getLocalData<CoursePricing>('course_pricing');
+
+          // 4. Combine courses with categories and pricing in memory
+          return coursesData.map(c => {
+            const normCourseId = normalizeToUUID(c.id) || c.id;
+            const categoryName = (c.category_id && catMap.get(c.category_id)) 
+              || c.category 
+              || 'Uncategorized';
+
+            const foundPricing = pricingData.find(p => p.course_id === c.id || p.course_id === normCourseId)
+              || localPricings.find(p => p.course_id === c.id || p.course_id === normCourseId)
+              || DEFAULT_COURSES.find(d => d.id === c.id || d.id === normCourseId)?.pricing;
+
+            return {
+              ...c,
+              category: categoryName,
+              pricing: foundPricing
+            };
+          }) as Course[];
+        } catch {
+          return DEFAULT_COURSES;
+        }
       } else {
-        const courses = getLocalData<Course>('courses');
-        const pricings = getLocalData<CoursePricing>('course_pricing');
-        const categories = getLocalData<CourseCategory>('categories');
+        let courses = getLocalData<Course>('courses');
+        let pricings = getLocalData<CoursePricing>('course_pricing');
+        const categories = await dataService.categories.getCategories();
+
+        // Migrate any cached legacy non-UUID IDs in local storage
+        if (courses.length > 0) {
+          let coursesMigrated = false;
+          courses = courses.map(c => {
+            const normId = normalizeToUUID(c.id) || c.id;
+            const normCatId = normalizeToUUID(c.category_id) || c.category_id;
+            if (normId !== c.id || normCatId !== c.category_id) {
+              coursesMigrated = true;
+              return { ...c, id: normId, category_id: normCatId };
+            }
+            return c;
+          });
+          if (coursesMigrated) {
+            setLocalData('courses', courses);
+          }
+        }
+
+        if (courses.length === 0) {
+          courses = [...DEFAULT_COURSES];
+          setLocalData('courses', courses);
+          
+          const defaultPricings = DEFAULT_COURSES.map(c => c.pricing).filter(Boolean) as CoursePricing[];
+          setLocalData('course_pricing', defaultPricings);
+          setLocalData('schedules', DEFAULT_SCHEDULES);
+          pricings = defaultPricings;
+        }
 
         return courses.map(c => {
-          const pricing = pricings.find(p => p.course_id === c.id);
-          const categoryObj = categories.find(cat => cat.id === c.category_id);
+          const pricing = pricings.find(p => p.course_id === c.id) || c.pricing;
+          const categoryObj = categories.find(cat => cat.id === c.category_id || cat.name.toLowerCase().trim() === (c.category || '').toLowerCase().trim());
           return {
             ...c,
             category: categoryObj?.name || c.category || 'Uncategorized',
+            category_id: c.category_id || categoryObj?.id,
             pricing: pricing || undefined
           };
         });
@@ -533,36 +918,70 @@ export const dataService = {
     },
 
     async getCourseSchedules(courseId: string, activeOnly: boolean = true): Promise<CourseSchedule[]> {
-      if (isSupabaseConfigured && supabase) {
-        let query = supabase
-          .from('course_schedules')
-          .select('*')
-          .eq('course_id', courseId);
-        if (activeOnly) {
-          query = query.eq('is_active', true);
+      let list: CourseSchedule[] = [];
+      const normalizedCourseId = normalizeToUUID(courseId) || courseId;
+
+      if (isSupabaseConfigured && supabase && isValidUUID(normalizedCourseId)) {
+        try {
+          let query = supabase
+            .from('course_schedules')
+            .select('*')
+            .eq('course_id', normalizedCourseId);
+          if (activeOnly) {
+            query = query.eq('is_active', true);
+          }
+          const { data } = await query.order('created_at', { ascending: false });
+          list = (data as CourseSchedule[]) || [];
+        } catch {
+          list = [];
         }
-        const { data } = await query.order('created_at', { ascending: false });
-        return (data as CourseSchedule[]) || [];
       } else {
-        const all = getLocalData<CourseSchedule>('schedules').filter(s => s.course_id === courseId);
-        return activeOnly ? all.filter(s => s.is_active) : all;
+        const all = getLocalData<CourseSchedule>('schedules').filter(s => s.course_id === courseId || s.course_id === normalizedCourseId);
+        list = activeOnly ? all.filter(s => s.is_active) : all;
       }
+
+      // Fallback to default schedules for this course if none found
+      if (list.length === 0) {
+        const defaultsForCourse = DEFAULT_SCHEDULES.filter(s => s.course_id === courseId || s.course_id === normalizedCourseId);
+        if (defaultsForCourse.length > 0) {
+          return defaultsForCourse;
+        }
+      }
+      return list;
     },
 
     async createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<Course> {
       if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase
+        // Strip out non-column joined attributes if present
+        const { pricing, ...cleanCourse } = course as any;
+        let { data, error } = await supabase
           .from('courses')
-          .insert([course])
+          .insert([cleanCourse])
           .select()
           .single();
+
+        if (error) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (errMsg.includes('category_id') || errMsg.includes('category') || errMsg.includes('schema cache') || errMsg.includes('column')) {
+            console.warn('Courses table schema missing category column, retrying with core columns:', error.message);
+            const { category_id, category, ...baseCourse } = cleanCourse;
+            const fallbackRes = await supabase
+              .from('courses')
+              .insert([baseCourse])
+              .select()
+              .single();
+            data = fallbackRes.data;
+            error = fallbackRes.error;
+          }
+        }
+
         if (error) throw new Error(error.message);
         return data as Course;
       } else {
         const courses = getLocalData<Course>('courses');
         const newCourse: Course = {
           ...course,
-          id: `course-uuid-${Date.now()}`,
+          id: generateValidUUID(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -574,12 +993,30 @@ export const dataService = {
 
     async updateCourse(id: string, updates: Partial<Course>): Promise<Course> {
       if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase
+        const { pricing, ...cleanUpdates } = updates as any;
+        let { data, error } = await supabase
           .from('courses')
-          .update(updates)
+          .update(cleanUpdates)
           .eq('id', id)
           .select()
           .single();
+
+        if (error) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (errMsg.includes('category_id') || errMsg.includes('category') || errMsg.includes('schema cache') || errMsg.includes('column')) {
+            console.warn('Courses table schema missing category column on update, retrying with core columns:', error.message);
+            const { category_id, category, ...baseUpdates } = cleanUpdates;
+            const fallbackRes = await supabase
+              .from('courses')
+              .update(baseUpdates)
+              .eq('id', id)
+              .select()
+              .single();
+            data = fallbackRes.data;
+            error = fallbackRes.error;
+          }
+        }
+
         if (error) throw new Error(error.message);
         return data as Course;
       } else {
@@ -644,7 +1081,7 @@ export const dataService = {
         const schedules = getLocalData<CourseSchedule>('schedules');
         const newSchedule: CourseSchedule = {
           ...schedule,
-          id: `schedule-uuid-${Date.now()}`,
+          id: generateValidUUID(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -704,112 +1141,253 @@ export const dataService = {
       currencySnapshot?: string,
       studentCountry?: string
     ): Promise<CourseSelection> {
+      const targetCourseId = normalizeToUUID(courseId) || courseId;
+      const targetScheduleId = scheduleId ? (normalizeToUUID(scheduleId) || scheduleId) : undefined;
+
       const totalRequests = isSupabaseConfigured && supabase
         ? 0 
         : getLocalData<CourseSelection>('selections').length;
       
       const countStr = String(totalRequests + 1).padStart(6, '0');
-      const referenceId = `ITA-2026-${countStr}`;
+      let referenceId = `ITA-2026-${countStr}`;
 
-      if (isSupabaseConfigured && supabase) {
-        const { count } = await supabase
-          .from('course_selections')
-          .select('*', { count: 'exact', head: true });
-        
-        const dbCountStr = String((count || 0) + 1).padStart(6, '0');
-        const dbRefId = `ITA-2026-${dbCountStr}`;
+      const isCourseUUID = isValidUUID(targetCourseId);
+      const isScheduleUUID = !targetScheduleId || isValidUUID(targetScheduleId);
 
-        const { data, error } = await supabase
+      if (isSupabaseConfigured && supabase && isCourseUUID) {
+        let dbRefId = referenceId;
+        try {
+          const { count } = await supabase
+            .from('course_selections')
+            .select('*', { count: 'exact', head: true });
+          
+          const dbCountStr = String((count || 0) + 1).padStart(6, '0');
+          dbRefId = `ITA-2026-${dbCountStr}`;
+          referenceId = dbRefId;
+        } catch {
+          // Keep referenceId
+        }
+
+        // 1. Try full insert with price/currency snapshot columns
+        const fullPayload: Record<string, any> = {
+          student_id: studentId,
+          course_id: targetCourseId,
+          reference_id: dbRefId,
+          status: 'pending',
+          payment_method: 'whatsapp_manual'
+        };
+        if (targetScheduleId && isScheduleUUID) fullPayload.schedule_id = targetScheduleId;
+        if (priceSnapshot !== undefined) fullPayload.price_snapshot = priceSnapshot;
+        if (currencySnapshot !== undefined) fullPayload.currency_snapshot = currencySnapshot;
+        if (studentCountry !== undefined) fullPayload.student_country = studentCountry;
+
+        let { data, error } = await supabase
           .from('course_selections')
-          .insert([{
-            student_id: studentId,
-            course_id: courseId,
-            schedule_id: scheduleId,
-            reference_id: dbRefId,
-            status: 'pending',
-            payment_method: 'whatsapp_manual',
+          .insert([fullPayload])
+          .select()
+          .single();
+
+        // 2. If Supabase rejects due to missing columns in schema cache, fallback to core columns
+        if (error) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (
+            errMsg.includes('currency_snapshot') ||
+            errMsg.includes('price_snapshot') ||
+            errMsg.includes('student_country') ||
+            errMsg.includes('schema cache') ||
+            errMsg.includes('column')
+          ) {
+            console.warn('Supabase course_selections missing snapshot columns in schema cache. Gracefully retrying with core columns:', error.message);
+            const basePayload: Record<string, any> = {
+              student_id: studentId,
+              course_id: targetCourseId,
+              reference_id: dbRefId,
+              status: 'pending',
+              payment_method: 'whatsapp_manual'
+            };
+            if (targetScheduleId && isScheduleUUID) basePayload.schedule_id = targetScheduleId;
+
+            const fallbackRes = await supabase
+              .from('course_selections')
+              .insert([basePayload])
+              .select()
+              .single();
+
+            data = fallbackRes.data;
+            error = fallbackRes.error;
+          }
+        }
+
+        // If duplicate selection in Supabase
+        if (error) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (error.code === '23505' || errMsg.includes('unique') || errMsg.includes('already exists')) {
+            throw new Error('You have already added this course to your selections.');
+          }
+
+          // If foreign key constraint or UUID type error occurs (e.g. course hasn't been seeded into Supabase public.courses table yet)
+          if (
+            error.code === '23503' || 
+            error.code === '22P02' || 
+            errMsg.includes('foreign key') || 
+            errMsg.includes('violates foreign key') || 
+            errMsg.includes('invalid input syntax for type uuid')
+          ) {
+            console.warn('Course or schedule reference not found in Supabase database. Falling back to local persistence:', error.message);
+            // Fall through to local persistence so user is NOT blocked
+          } else {
+            throw new Error(error.message);
+          }
+        }
+
+        if (data) {
+          const created = data as CourseSelection;
+
+          // Persist metadata snapshot locally so client UI and payment processing retain snapshot details
+          const metaPayload = {
             price_snapshot: priceSnapshot,
             currency_snapshot: currencySnapshot,
             student_country: studentCountry
-          }])
-          .select()
-          .single();
-        if (error) throw new Error(error.message);
-        return data as CourseSelection;
-      } else {
-        const selections = getLocalData<CourseSelection>('selections');
-        const exists = selections.some(s => s.student_id === studentId && s.course_id === courseId);
-        if (exists) {
-          throw new Error('You have already requested this course.');
+          };
+          if (created?.id) saveSelectionMeta(created.id, metaPayload);
+          if (dbRefId) saveSelectionMeta(dbRefId, metaPayload);
+
+          return {
+            ...created,
+            price_snapshot: created?.price_snapshot ?? priceSnapshot,
+            currency_snapshot: created?.currency_snapshot ?? currencySnapshot,
+            student_country: created?.student_country ?? studentCountry
+          };
         }
-
-        const newSelection: CourseSelection = {
-          id: `selection-uuid-${Date.now()}`,
-          student_id: studentId,
-          course_id: courseId,
-          schedule_id: scheduleId,
-          reference_id: referenceId,
-          status: 'pending',
-          payment_method: 'whatsapp_manual',
-          price_snapshot: priceSnapshot,
-          currency_snapshot: currencySnapshot,
-          student_country: studentCountry,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-
-        selections.push(newSelection);
-        setLocalData('selections', selections);
-        return newSelection;
       }
+
+      // Local storage persistence (used for local mode, offline, or fallback when course is not yet seeded in Supabase)
+      const selections = getLocalData<CourseSelection>('selections');
+      const exists = selections.some(s => 
+        s.student_id === studentId && 
+        (s.course_id === targetCourseId || s.course_id === courseId)
+      );
+      if (exists) {
+        throw new Error('You have already added this course to your selections.');
+      }
+
+      const generatedId = generateValidUUID();
+      const newSelection: CourseSelection = {
+        id: generatedId,
+        student_id: studentId,
+        course_id: targetCourseId,
+        schedule_id: targetScheduleId,
+        reference_id: referenceId,
+        status: 'pending',
+        payment_method: 'whatsapp_manual',
+        price_snapshot: priceSnapshot,
+        currency_snapshot: currencySnapshot,
+        student_country: studentCountry,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      selections.push(newSelection);
+      setLocalData('selections', selections);
+
+      const metaPayload = {
+        price_snapshot: priceSnapshot,
+        currency_snapshot: currencySnapshot,
+        student_country: studentCountry
+      };
+      saveSelectionMeta(newSelection.id, metaPayload);
+      saveSelectionMeta(referenceId, metaPayload);
+
+      return newSelection;
     },
 
     async getCourseSelections(studentId?: string): Promise<CourseSelection[]> {
+      let dbList: CourseSelection[] = [];
+      const metaMap = getSelectionMetaMap();
+
       if (isSupabaseConfigured && supabase) {
-        let query = supabase
-          .from('course_selections')
-          .select(`
-            *,
-            course:courses(title),
-            student:profiles(email, full_name),
-            schedule:course_schedules(label)
-          `);
-        
-        if (studentId) {
-          query = query.eq('student_id', studentId);
+        try {
+          let query = supabase
+            .from('course_selections')
+            .select(`
+              *,
+              course:courses(title),
+              student:profiles(email, full_name),
+              schedule:course_schedules(label)
+            `);
+          
+          if (studentId) {
+            query = query.eq('student_id', studentId);
+          }
+
+          let { data, error } = await query.order('created_at', { ascending: false });
+          if (error) {
+            let baseQuery = supabase.from('course_selections').select('*');
+            if (studentId) {
+              baseQuery = baseQuery.eq('student_id', studentId);
+            }
+            const fallbackRes = await baseQuery.order('created_at', { ascending: false });
+            data = fallbackRes.data;
+          }
+
+          if (data) {
+            dbList = (data as any[]).map(s => {
+              const meta = metaMap[s.id] || metaMap[s.reference_id] || {};
+              return {
+                ...s,
+                price_snapshot: s.price_snapshot ?? meta.price_snapshot,
+                currency_snapshot: s.currency_snapshot ?? meta.currency_snapshot ?? 'USD',
+                student_country: s.student_country ?? meta.student_country,
+                course_title: s.course?.title,
+                student_email: s.student?.email,
+                student_name: s.student?.full_name,
+                schedule_label: s.schedule?.label
+              };
+            });
+          }
+        } catch {
+          // Gracefully handled
         }
-
-        const { data } = await query.order('created_at', { ascending: false });
-        
-        return ((data || []) as any[]).map(s => ({
-          ...s,
-          course_title: s.course?.title,
-          student_email: s.student?.email,
-          student_name: s.student?.full_name,
-          schedule_label: s.schedule?.label
-        }));
-      } else {
-        const selections = getLocalData<CourseSelection>('selections');
-        const courses = getLocalData<Course>('courses');
-        const profiles = getLocalData<Profile>('profiles');
-        const schedules = getLocalData<CourseSchedule>('schedules');
-
-        const filtered = studentId ? selections.filter(s => s.student_id === studentId) : selections;
-
-        return filtered.map(s => {
-          const course = courses.find(c => c.id === s.course_id);
-          const student = profiles.find(p => p.id === s.student_id);
-          const schedule = schedules.find(sc => sc.id === s.schedule_id);
-
-          return {
-            ...s,
-            course_title: course?.title || 'Unknown Course',
-            student_email: student?.email || 'Unknown Email',
-            student_name: student?.full_name || 'Unknown Student',
-            schedule_label: schedule?.label || 'Not Scheduled'
-          };
-        }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
+
+      // Merge local selections (for offline or local-fallback items)
+      const localSelections = getLocalData<CourseSelection>('selections');
+      const courses = getLocalData<Course>('courses');
+      const profiles = getLocalData<Profile>('profiles');
+      const schedules = getLocalData<CourseSchedule>('schedules');
+
+      const filteredLocal = studentId ? localSelections.filter(s => s.student_id === studentId) : localSelections;
+      const existingRefs = new Set(dbList.map(s => s.reference_id));
+      const existingIds = new Set(dbList.map(s => s.id));
+      const existingCourseKeys = new Set(dbList.map(s => `${s.student_id}_${s.course_id}`));
+
+      for (const local of filteredLocal) {
+        const normCourseId = normalizeToUUID(local.course_id) || local.course_id;
+        const key1 = `${local.student_id}_${local.course_id}`;
+        const key2 = `${local.student_id}_${normCourseId}`;
+
+        if (!existingIds.has(local.id) && !existingRefs.has(local.reference_id) && !existingCourseKeys.has(key1) && !existingCourseKeys.has(key2)) {
+          const course = courses.find(c => c.id === local.course_id || c.id === normCourseId) || 
+            DEFAULT_COURSES.find(c => c.id === local.course_id || c.id === normCourseId);
+          const student = profiles.find(p => p.id === local.student_id);
+          const schedule = schedules.find(sc => sc.id === local.schedule_id) ||
+            DEFAULT_SCHEDULES.find(sc => sc.id === local.schedule_id);
+
+          const meta = metaMap[local.id] || metaMap[local.reference_id] || {};
+          dbList.push({
+            ...local,
+            price_snapshot: local.price_snapshot ?? meta.price_snapshot,
+            currency_snapshot: local.currency_snapshot ?? meta.currency_snapshot ?? 'USD',
+            student_country: local.student_country ?? meta.student_country,
+            course_title: course?.title || 'Course',
+            student_email: student?.email || 'Student',
+            student_name: student?.full_name || 'Student',
+            schedule_label: schedule?.label || 'Scheduled'
+          });
+        }
+      }
+
+      return dbList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
 
     async updateSelectionStatus(selectionId: string, status: SelectionStatus, adminId: string): Promise<void> {
@@ -829,6 +1407,11 @@ export const dataService = {
             .single();
 
           if (selection) {
+            const metaMap = getSelectionMetaMap();
+            const meta = metaMap[selection.id] || metaMap[selection.reference_id] || {};
+            const resolvedPrice = selection.price_snapshot ?? meta.price_snapshot ?? 0;
+            const resolvedCurrency = selection.currency_snapshot ?? meta.currency_snapshot ?? 'USD';
+
             await supabase
               .from('enrollments')
               .insert([{
@@ -848,8 +1431,8 @@ export const dataService = {
               .insert([{
                 student_id: selection.student_id,
                 reference_id: selection.reference_id,
-                amount: selection.price_snapshot || 0,
-                currency: selection.currency_snapshot || 'USD',
+                amount: resolvedPrice,
+                currency: resolvedCurrency,
                 status: 'confirmed',
                 payment_method: 'whatsapp_manual',
                 notes: 'Approved via Course Requests dashboard',
@@ -874,7 +1457,7 @@ export const dataService = {
           const exists = enrollments.some(e => e.student_id === selection.student_id && e.course_id === selection.course_id);
           if (!exists) {
             enrollments.push({
-              id: `enrollment-uuid-${Date.now()}`,
+              id: generateValidUUID(),
               student_id: selection.student_id,
               course_id: selection.course_id,
               schedule_id: selection.schedule_id,
@@ -891,7 +1474,7 @@ export const dataService = {
 
           const payments = getLocalData<Payment>('payments');
           payments.push({
-            id: `payment-uuid-${Date.now()}`,
+            id: generateValidUUID(),
             student_id: selection.student_id,
             reference_id: selection.reference_id,
             amount: selection.price_snapshot || 0,
@@ -907,52 +1490,95 @@ export const dataService = {
           setLocalData('payments', payments);
         }
       }
+    },
+
+    async deleteCourseSelection(selectionId: string): Promise<void> {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase
+          .from('course_selections')
+          .delete()
+          .eq('id', selectionId);
+        if (error) throw new Error(error.message);
+      } else {
+        const selections = getLocalData<CourseSelection>('selections');
+        const filtered = selections.filter(s => s.id !== selectionId);
+        setLocalData('selections', filtered);
+      }
     }
   },
 
   // 5. ENROLLMENTS
   enrollments: {
     async getEnrollments(studentId?: string): Promise<Enrollment[]> {
+      let dbList: Enrollment[] = [];
+
       if (isSupabaseConfigured && supabase) {
-        let query = supabase
-          .from('enrollments')
-          .select(`
-            *,
-            course:courses(title, image_url),
-            schedule:course_schedules(label)
-          `);
-        
-        if (studentId) {
-          query = query.eq('student_id', studentId);
+        try {
+          let query = supabase
+            .from('enrollments')
+            .select(`
+              *,
+              course:courses(title, image_url),
+              schedule:course_schedules(label)
+            `);
+          
+          if (studentId) {
+            query = query.eq('student_id', studentId);
+          }
+
+          let { data, error } = await query.order('created_at', { ascending: false });
+          if (error) {
+            let baseQuery = supabase.from('enrollments').select('*');
+            if (studentId) {
+              baseQuery = baseQuery.eq('student_id', studentId);
+            }
+            const fallbackRes = await baseQuery.order('created_at', { ascending: false });
+            data = fallbackRes.data;
+          }
+
+          if (data) {
+            dbList = (data as any[]).map(e => ({
+              ...e,
+              course_title: e.course?.title,
+              course_image: e.course?.image_url,
+              schedule_label: e.schedule?.label
+            }));
+          }
+        } catch {
+          // Gracefully handled
         }
+      }
 
-        const { data } = await query.order('created_at', { ascending: false });
+      // Merge local enrollments (for offline or local fallback)
+      const enrollments = getLocalData<Enrollment>('enrollments');
+      const courses = getLocalData<Course>('courses');
+      const schedules = getLocalData<CourseSchedule>('schedules');
 
-        return ((data || []) as any[]).map(e => ({
-          ...e,
-          course_title: e.course?.title,
-          course_image: e.course?.image_url,
-          schedule_label: e.schedule?.label
-        }));
-      } else {
-        const enrollments = getLocalData<Enrollment>('enrollments');
-        const courses = getLocalData<Course>('courses');
-        const schedules = getLocalData<CourseSchedule>('schedules');
+      const filtered = studentId ? enrollments.filter(e => e.student_id === studentId) : enrollments;
+      const existingIds = new Set(dbList.map(e => e.id));
+      const existingCourseKeys = new Set(dbList.map(e => `${e.student_id}_${e.course_id}`));
 
-        const filtered = studentId ? enrollments.filter(e => e.student_id === studentId) : enrollments;
+      for (const e of filtered) {
+        const normCourseId = normalizeToUUID(e.course_id) || e.course_id;
+        const key1 = `${e.student_id}_${e.course_id}`;
+        const key2 = `${e.student_id}_${normCourseId}`;
 
-        return filtered.map(e => {
-          const course = courses.find(c => c.id === e.course_id);
-          const schedule = schedules.find(sc => sc.id === e.schedule_id);
+        if (!existingIds.has(e.id) && !existingCourseKeys.has(key1) && !existingCourseKeys.has(key2)) {
+          const course = courses.find(c => c.id === e.course_id || c.id === normCourseId) ||
+            DEFAULT_COURSES.find(c => c.id === e.course_id || c.id === normCourseId);
+          const schedule = schedules.find(sc => sc.id === e.schedule_id) ||
+            DEFAULT_SCHEDULES.find(sc => sc.id === e.schedule_id);
 
-          return {
+          dbList.push({
             ...e,
-            course_title: course?.title || 'Unknown Course',
+            course_title: course?.title || 'Enrolled Course',
             course_image: course?.image_url,
             schedule_label: schedule?.label || 'Not Scheduled'
-          };
-        }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          });
+        }
       }
+
+      return dbList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
 
     async createManualEnrollment(
@@ -961,48 +1587,72 @@ export const dataService = {
       scheduleId: string | undefined, 
       adminId: string
     ): Promise<Enrollment> {
-      if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase
-          .from('enrollments')
-          .insert([{
-            student_id: studentId,
-            course_id: courseId,
-            schedule_id: scheduleId,
-            status: 'active',
-            access_granted: true,
-            access_type: 'manual',
-            approved_by: adminId,
-            approved_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-        if (error) throw new Error(error.message);
-        return data as Enrollment;
-      } else {
-        const enrollments = getLocalData<Enrollment>('enrollments');
-        const exists = enrollments.some(e => e.student_id === studentId && e.course_id === courseId);
-        if (exists) {
-          throw new Error('Student is already enrolled in this course.');
-        }
+      const normCourseId = normalizeToUUID(courseId) || courseId;
+      const normScheduleId = scheduleId ? (normalizeToUUID(scheduleId) || scheduleId) : undefined;
 
-        const newEnrollment: Enrollment = {
-          id: `enrollment-uuid-${Date.now()}`,
+      const isCourseUUID = isValidUUID(normCourseId);
+      const isScheduleUUID = !normScheduleId || isValidUUID(normScheduleId);
+
+      if (isSupabaseConfigured && supabase && isCourseUUID) {
+        const payload: Record<string, any> = {
           student_id: studentId,
-          course_id: courseId,
-          schedule_id: scheduleId,
+          course_id: normCourseId,
           status: 'active',
           access_granted: true,
           access_type: 'manual',
           approved_by: adminId,
-          approved_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          approved_at: new Date().toISOString()
         };
+        if (normScheduleId && isScheduleUUID) {
+          payload.schedule_id = normScheduleId;
+        }
 
-        enrollments.push(newEnrollment);
-        setLocalData('enrollments', enrollments);
-        return newEnrollment;
+        const { data, error } = await supabase
+          .from('enrollments')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (
+            error.code === '23503' || 
+            error.code === '22P02' || 
+            errMsg.includes('foreign key') || 
+            errMsg.includes('invalid input syntax for type uuid')
+          ) {
+            console.warn('Supabase enrollments foreign key missing, saving locally:', error.message);
+          } else {
+            throw new Error(error.message);
+          }
+        } else if (data) {
+          return data as Enrollment;
+        }
       }
+
+      const enrollments = getLocalData<Enrollment>('enrollments');
+      const exists = enrollments.some(e => e.student_id === studentId && (e.course_id === courseId || e.course_id === normCourseId));
+      if (exists) {
+        throw new Error('Student is already enrolled in this course.');
+      }
+
+      const newEnrollment: Enrollment = {
+        id: generateValidUUID(),
+        student_id: studentId,
+        course_id: normCourseId,
+        schedule_id: normScheduleId,
+        status: 'active',
+        access_granted: true,
+        access_type: 'manual',
+        approved_by: adminId,
+        approved_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      enrollments.push(newEnrollment);
+      setLocalData('enrollments', enrollments);
+      return newEnrollment;
     }
   },
 
