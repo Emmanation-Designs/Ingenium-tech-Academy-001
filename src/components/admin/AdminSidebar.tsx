@@ -74,7 +74,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Drawer Header with Ingenium Logo */}
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00B074] flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-[#0A9D8F] flex items-center justify-center shadow-xs">
               <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
@@ -100,7 +100,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Admin Profile Box */}
         <div className="p-4 mx-3 my-3 bg-gray-50/80 rounded-2xl border border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#00B074]/15 border border-[#00B074]/30 flex items-center justify-center text-[#00B074] font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-[#0A9D8F]/15 border border-[#0A9D8F]/30 flex items-center justify-center text-[#0A9D8F] font-bold text-sm">
               {currentUser.full_name?.charAt(0).toUpperCase() || 'A'}
             </div>
             <div className="overflow-hidden">
@@ -129,16 +129,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#EAFBF3] text-[#00B074]'
+                    ? 'bg-[#E6F5F4] text-[#0A9D8F]'
                     : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#00B074]' : 'text-gray-500'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#0A9D8F]' : 'text-gray-500'}`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="bg-[#00B074] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-[#0A9D8F] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {item.badge}
                   </span>
                 )}

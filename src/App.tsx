@@ -31,28 +31,56 @@ export default function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  // Initialize session and onboarding preference
+  // Initialize session, auth listeners, and onboarding preference
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        // Read onboarding state
-        const hasOnboarded = localStorage.getItem('ingenium_onboarded') === 'true';
-        setOnboarded(hasOnboarded);
+    let isMounted = true;
 
-        // Fetch current session from dataService
+    // Read onboarding state
+    const hasOnboarded = localStorage.getItem('ingenium_onboarded') === 'true';
+    setOnboarded(hasOnboarded);
+
+    // Initial session fetch
+    const initAuth = async () => {
+      try {
         const user = await dataService.auth.getCurrentUser();
-        if (user) {
-          setCurrentUser(user);
-          setCurrentRole(user.role);
+        if (isMounted) {
+          if (user) {
+            setCurrentUser(user);
+            setCurrentRole(user.role);
+          }
+          setLoading(false);
         }
       } catch (e) {
         console.error('Session initialisation failed', e);
-      } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    
-    checkSession();
+
+    initAuth();
+
+    // Listen to Supabase Auth state changes (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED)
+    const subscription = dataService.auth.onAuthStateChange(
+      (event, session, profile) => {
+        if (!isMounted) return;
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          if (profile) {
+            setCurrentUser(profile);
+            setCurrentRole(profile.role);
+          } else if (!session) {
+            setCurrentUser(null);
+            setCurrentRole('student');
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setCurrentUser(null);
+          setCurrentRole('student');
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const handleOnboardingComplete = () => {
@@ -69,6 +97,7 @@ export default function App() {
     await dataService.auth.signOut();
     setCurrentUser(null);
     setCurrentRole('student');
+    // Keep onboarding marked as completed so the user is directly returned to the sign-in screen
   };
 
   const handleProfileUpdate = (updatedProfile: Profile) => {
@@ -80,7 +109,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen dot-grid text-white font-sans">
-        <Loader2 className="w-8 h-8 text-[#00B074] animate-spin mb-3" />
+        <Loader2 className="w-8 h-8 text-[#0A9D8F] animate-spin mb-3" />
         <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-zinc-400">
           Ingenium Tech Academy
         </span>
@@ -88,45 +117,42 @@ export default function App() {
     );
   }
 
-  // 1. Onboarding Flow (Exactly 4 screens)
+  // 1. Authenticated users go straight to their dashboard (never blocked by onboarding)
+  if (currentUser) {
+    return (
+      <div className={`min-h-screen ${currentRole === 'admin' ? 'bg-[#F8FAFC] text-[#111827]' : (theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white')} selection:bg-[#0A9D8F]/20 font-sans`}>
+        {currentRole === 'admin' ? (
+          <AdminApp 
+            currentUser={currentUser} 
+            onLogout={handleLogout} 
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        ) : (
+          <StudentApp 
+            currentUser={currentUser} 
+            onLogout={handleLogout}
+            onProfileUpdate={handleProfileUpdate}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // 2. Onboarding Flow (for new first-time visitors)
   if (!onboarded) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // 2. Authentication Flow (Clean, un-tabbed)
-  if (!currentUser) {
-    return (
-      <Auth 
-        onSuccess={handleAuthSuccess} 
-        onBackToOnboarding={() => {
-          localStorage.removeItem('ingenium_onboarded');
-          setOnboarded(false);
-        }} 
-      />
-    );
-  }
-
-  // 3. Authenticated Role views
+  // 3. Authentication Flow (Clean, direct Supabase auth)
   return (
-    <div className={`min-h-screen ${currentRole === 'admin' ? 'bg-[#F8FAFC] text-[#111827]' : (theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white')} selection:bg-[#00B074]/20 font-sans`}>
-      
-      {currentRole === 'admin' ? (
-        <AdminApp 
-          currentUser={currentUser} 
-          onLogout={handleLogout} 
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-      ) : (
-        <StudentApp 
-          currentUser={currentUser} 
-          onLogout={handleLogout}
-          onProfileUpdate={handleProfileUpdate}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-      )}
-      
-    </div>
+    <Auth 
+      onSuccess={handleAuthSuccess} 
+      onBackToOnboarding={() => {
+        setOnboarded(false);
+      }} 
+    />
   );
 }

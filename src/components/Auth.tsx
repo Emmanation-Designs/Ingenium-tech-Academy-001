@@ -119,7 +119,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
         {/* Logo and Brand Header */}
         <div className="text-center mt-12 mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-zinc-950 border border-zinc-800 mb-3 shadow-lg">
-            <span className="text-[#00B074] font-extrabold text-xl">I</span>
+            <span className="text-[#0A9D8F] font-extrabold text-xl">I</span>
           </div>
           <h1 className="text-xl font-black tracking-tight text-white">
             Ingenium Tech Academy
@@ -140,8 +140,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
         )}
 
         {successMsg && (
-          <div className="mb-4 p-3 bg-emerald-950/20 border border-emerald-900/50 rounded-xl text-xs font-semibold text-[#00B074] flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-[#00B074] shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 bg-emerald-950/20 border border-emerald-900/50 rounded-xl text-xs font-semibold text-[#0A9D8F] flex items-start gap-2">
+            <CheckCircle className="w-4 h-4 text-[#0A9D8F] shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -162,7 +162,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="E.g. John Doe"
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-semibold"
+                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -177,7 +177,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="E.g. +234 803 123 4567"
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-semibold"
+                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -191,7 +191,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     placeholder="E.g. Nigeria"
-                    className="w-full px-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-semibold"
+                    className="w-full px-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>
                 <div>
@@ -199,7 +199,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-3 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-bold"
+                    className="w-full px-3 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-bold"
                   >
                     <option value="Africa/Lagos">Africa/Lagos</option>
                     <option value="Europe/London">Europe/London</option>
@@ -223,7 +223,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="E.g. student@example.com"
-                className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-semibold"
+                className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                   <button
                     type="button"
                     onClick={() => setMode('forgot')}
-                    className="text-xs font-bold text-[#00B074] hover:underline cursor-pointer"
+                    className="text-xs font-bold text-[#0A9D8F] hover:underline cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -251,7 +251,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 6 characters"
-                  className="w-full pl-10 pr-12 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30 focus:outline-none transition-all font-semibold"
+                  className="w-full pl-10 pr-12 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                 />
                 <button
                   type="button"
@@ -269,7 +269,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-2xl bg-[#00B074] hover:bg-[#00905D] text-white font-extrabold text-sm border border-zinc-800 shadow-lg active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-2xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-extrabold text-sm border border-zinc-800 shadow-lg active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Please wait...' : (
               mode === 'signin' ? 'Sign In' : 

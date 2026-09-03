@@ -43,7 +43,7 @@ export const AdminCategories: React.FC<AdminCategoriesProps> = ({
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className="inline-flex items-center gap-1.5 bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs"
+          className="inline-flex items-center gap-1.5 bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs"
         >
           <Plus className="w-4 h-4" />
           <span>Add Category</span>
@@ -59,7 +59,7 @@ export const AdminCategories: React.FC<AdminCategoriesProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Artificial Intelligence"
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
           />
           <div className="flex gap-2">
             <button
@@ -72,7 +72,7 @@ export const AdminCategories: React.FC<AdminCategoriesProps> = ({
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-[#00B074] text-white text-xs font-bold rounded-xl disabled:opacity-50"
+              className="px-4 py-2 bg-[#0A9D8F] text-white text-xs font-bold rounded-xl disabled:opacity-50"
             >
               {saving ? 'Creating...' : 'Save Category'}
             </button>
@@ -89,7 +89,7 @@ export const AdminCategories: React.FC<AdminCategoriesProps> = ({
               className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#EAFBF3] text-[#00B074] flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center font-bold">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
@@ -97,7 +97,7 @@ export const AdminCategories: React.FC<AdminCategoriesProps> = ({
                   <p className="text-[11px] text-gray-400 font-medium">{courseCount} {courseCount === 1 ? 'course' : 'courses'}</p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAFBF3] text-[#00B074]">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F]">
                 Active
               </span>
             </div>

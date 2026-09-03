@@ -60,7 +60,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 px-6 py-12 select-none font-sans">
       {/* Sleek Onboarding Card Frame */}
-      <div className="w-full max-w-[400px] bg-[#00B074] border border-emerald-500/20 flex flex-col justify-between min-h-[640px] rounded-[32px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
+      <div className="w-full max-w-[400px] bg-[#0A9D8F] border border-emerald-500/20 flex flex-col justify-between min-h-[640px] rounded-[32px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
         
         {/* Dynamic Step Content */}
         <div className="flex-1 flex flex-col justify-center my-8 text-center px-2">
@@ -113,13 +113,24 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             <button
               onClick={handleNext}
-              className="flex-1 py-3.5 px-6 rounded-full bg-white hover:bg-zinc-100 text-[#00B074] font-black text-sm shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 py-3.5 px-6 rounded-full bg-white hover:bg-zinc-100 text-[#0A9D8F] font-black text-sm shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               {currentStep === steps.length - 1 ? (
                 <span>Get started</span>
               ) : (
                 <span>Next</span>
               )}
+            </button>
+          </div>
+
+          {/* Direct Sign In option for returning users */}
+          <div className="text-center pt-1 pb-1">
+            <button
+              type="button"
+              onClick={onComplete}
+              className="text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 cursor-pointer transition-colors"
+            >
+              Already have an account? Sign In
             </button>
           </div>
         </div>

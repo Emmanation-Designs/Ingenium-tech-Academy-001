@@ -69,8 +69,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-5 pb-20">
       {/* Welcome Banner */}
       <div>
-        <h2 className="text-xl md:text-2xl font-black text-gray-950 tracking-tight flex items-center gap-2">
-          Welcome back, {currentUser.full_name?.split(' ')[0] || 'Admin'}! <span>👋</span>
+        <h2 className="text-xl md:text-2xl font-black text-gray-950 tracking-tight">
+          Welcome back, {currentUser.full_name?.split(' ')[0] || 'Admin'}!
         </h2>
         <p className="text-xs text-gray-500 font-medium mt-0.5">
           Here's what's happening today.
@@ -85,7 +85,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EAFBF3] flex items-center justify-center text-[#00B074]">
+            <div className="w-10 h-10 rounded-full bg-[#E6F5F4] flex items-center justify-center text-[#0A9D8F]">
               <Users className="w-5 h-5" />
             </div>
           </div>
@@ -104,7 +104,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EAFBF3] flex items-center justify-center text-[#00B074]">
+            <div className="w-10 h-10 rounded-full bg-[#E6F5F4] flex items-center justify-center text-[#0A9D8F]">
               <BookOpen className="w-5 h-5" />
             </div>
           </div>
@@ -123,7 +123,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EAFBF3] flex items-center justify-center text-[#00B074]">
+            <div className="w-10 h-10 rounded-full bg-[#E6F5F4] flex items-center justify-center text-[#0A9D8F]">
               <Inbox className="w-5 h-5" />
             </div>
           </div>
@@ -142,7 +142,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EAFBF3] flex items-center justify-center text-[#00B074]">
+            <div className="w-10 h-10 rounded-full bg-[#E6F5F4] flex items-center justify-center text-[#0A9D8F]">
               <ShieldCheck className="w-5 h-5" />
             </div>
           </div>
@@ -200,7 +200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <path
                 d={svgPath}
                 fill="none"
-                stroke="#00B074"
+                stroke="#0A9D8F"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -211,7 +211,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   cx={point.x}
                   cy={point.y}
                   r="4"
-                  className="fill-[#00B074] stroke-white stroke-2"
+                  className="fill-[#0A9D8F] stroke-white stroke-2"
                 />
               ))}
             </svg>
@@ -238,7 +238,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h3 className="text-sm font-bold text-gray-950">Recent Course Requests</h3>
           <button 
             onClick={() => onNavigate('requests')}
-            className="text-xs font-semibold text-[#00B074] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-semibold text-[#0A9D8F] hover:underline flex items-center gap-1 cursor-pointer"
           >
             <span>View All</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -274,7 +274,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="text-right">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${
                     req.status === 'approved' 
-                      ? 'bg-[#EAFBF3] text-[#00B074]' 
+                      ? 'bg-[#E6F5F4] text-[#0A9D8F]' 
                       : req.status === 'rejected'
                       ? 'bg-gray-100 text-gray-600'
                       : 'bg-amber-50 text-amber-700 border border-amber-200'

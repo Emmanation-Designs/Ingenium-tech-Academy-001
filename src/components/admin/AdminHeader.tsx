@@ -38,7 +38,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#00B074]" />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#0A9D8F]" />
               )}
             </button>
           </div>

@@ -108,12 +108,12 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
               key={tab}
               onClick={() => setActiveSubTab(tab)}
               className={`flex-1 pb-2.5 text-xs font-semibold text-center transition-all cursor-pointer relative ${
-                isActive ? 'text-[#00B074]' : 'text-gray-500 hover:text-gray-900'
+                isActive ? 'text-[#0A9D8F]' : 'text-gray-500 hover:text-gray-900'
               }`}
             >
               {labels[tab]}
               {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0A9D8F]" />
               )}
             </button>
           );
@@ -130,7 +130,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
             </h3>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs"
             >
               <Plus className="w-4 h-4" />
               <span>Add Time</span>
@@ -140,7 +140,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
           {/* List of Schedules */}
           {schedules.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center my-4 space-y-4 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-[#EAFBF3] text-[#00B074] flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center mx-auto">
                 <Clock className="w-6 h-6" />
               </div>
               <div className="space-y-1">
@@ -151,7 +151,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-1.5 bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Class Time</span>
@@ -165,7 +165,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                   className="bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs flex items-center justify-between hover:border-gray-200 transition-all relative"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#00B074] mt-1.5 shrink-0" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#0A9D8F] mt-1.5 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-gray-950">
                         {sch.day_of_week || 'Scheduled Days'}
@@ -181,7 +181,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
 
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      sch.is_active ? 'bg-[#EAFBF3] text-[#00B074]' : 'bg-gray-100 text-gray-500'
+                      sch.is_active ? 'bg-[#E6F5F4] text-[#0A9D8F]' : 'bg-gray-100 text-gray-500'
                     }`}>
                       {sch.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -291,7 +291,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder="e.g. Weekday Morning (Mon & Wed)"
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
                 />
               </div>
 
@@ -302,7 +302,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                 <select
                   value={dayOfWeek}
                   onChange={(e) => setDayOfWeek(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
                 >
                   <option value="Mon & Wed">Mon & Wed</option>
                   <option value="Tue & Thu">Tue & Thu</option>
@@ -323,7 +323,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                     required
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+                    className="w-full px-2.5 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
                   />
                 </div>
                 <div>
@@ -335,7 +335,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                     required
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+                    className="w-full px-2.5 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
                   />
                 </div>
               </div>
@@ -348,7 +348,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                   type="text"
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#00B074]"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#0A9D8F]"
                 />
               </div>
 
@@ -363,7 +363,7 @@ export const AdminClassTimes: React.FC<AdminClassTimesProps> = ({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-2.5 bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Class Time'}
                 </button>

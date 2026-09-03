@@ -218,9 +218,9 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-8 px-4 border-2 border-dashed border-gray-200 hover:border-[#00B074] bg-gray-50/60 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all"
+                  className="w-full py-8 px-4 border-2 border-dashed border-gray-200 hover:border-[#0A9D8F] bg-gray-50/60 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all"
                 >
-                  <div className="w-11 h-11 rounded-full bg-[#EAFBF3] text-[#00B074] flex items-center justify-center mb-2">
+                  <div className="w-11 h-11 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center mb-2">
                     <UploadCloud className="w-6 h-6" />
                   </div>
                   <p className="text-xs font-bold text-gray-800">
@@ -252,7 +252,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Data Analysis with Excel"
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00B074] transition-all"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0A9D8F] transition-all"
               />
             </div>
 
@@ -266,7 +266,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                 value={shortDescription}
                 onChange={(e) => setShortDescription(e.target.value)}
                 placeholder="A short summary about the course"
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00B074] transition-all"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0A9D8F] transition-all"
               />
             </div>
 
@@ -275,7 +275,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               <label className="block text-xs font-bold text-gray-800 mb-1.5">
                 Full Description
               </label>
-              <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-[#00B074] transition-all bg-white">
+              <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-[#0A9D8F] transition-all bg-white">
                 {/* Mini Formatting Toolbar */}
                 <div className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-50 border-b border-gray-200 text-gray-600 text-xs">
                   <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
@@ -305,7 +305,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowNewCatInput(!showNewCatInput)}
-                      className="text-[10px] text-[#00B074] font-semibold hover:underline cursor-pointer"
+                      className="text-[10px] text-[#0A9D8F] font-semibold hover:underline cursor-pointer"
                     >
                       + New
                     </button>
@@ -314,7 +314,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#00B074] transition-all"
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -336,7 +336,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveCategory}
-                      className="px-2.5 py-1 bg-[#00B074] text-white text-[11px] font-bold rounded-lg cursor-pointer"
+                      className="px-2.5 py-1 bg-[#0A9D8F] text-white text-[11px] font-bold rounded-lg cursor-pointer"
                     >
                       Save
                     </button>
@@ -353,7 +353,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="e.g. 8 Weeks"
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#00B074] transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
                 />
               </div>
             </div>
@@ -366,7 +366,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               <select
                 value={trainingMode}
                 onChange={(e) => setTrainingMode(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#00B074] transition-all"
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
               >
                 <option value="online">Live Online</option>
                 <option value="self-paced">Self-Paced</option>
@@ -379,7 +379,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentStep('pricing')}
-                className="w-full py-3 bg-[#00B074] hover:bg-[#00905D] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+                className="w-full py-3 bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
                 Next: Set Pricing →
               </button>
@@ -391,8 +391,8 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
         {currentStep === 'pricing' && (
           <div className="space-y-4">
             {/* Info Banner */}
-            <div className="p-3.5 bg-[#EAFBF3] rounded-2xl border border-[#00B074]/20 flex items-start gap-3">
-              <Info className="w-5 h-5 text-[#00B074] shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-[#E6F5F4] rounded-2xl border border-[#0A9D8F]/20 flex items-start gap-3">
+              <Info className="w-5 h-5 text-[#0A9D8F] shrink-0 mt-0.5" />
               <p className="text-xs text-gray-800 leading-relaxed font-medium">
                 Set the price for this course in different currencies. Students will see the price based on their country.
               </p>
@@ -413,7 +413,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                   value={usdPrice}
                   onChange={(e) => setUsdPrice(Number(e.target.value))}
                   placeholder="400"
-                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#00B074] transition-all"
+                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#0A9D8F] transition-all"
                 />
               </div>
             </div>
@@ -433,7 +433,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                   value={ngnPrice}
                   onChange={(e) => setNgnPrice(Number(e.target.value))}
                   placeholder="200,000"
-                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#00B074] transition-all"
+                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#0A9D8F] transition-all"
                 />
               </div>
             </div>
@@ -453,7 +453,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                   value={eurPrice}
                   onChange={(e) => setEurPrice(Number(e.target.value))}
                   placeholder="400"
-                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#00B074] transition-all"
+                  className="w-full pl-8 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#0A9D8F] transition-all"
                 />
               </div>
             </div>
@@ -474,7 +474,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                       onClick={() => setStatus(s)}
                       className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         isActive
-                          ? 'bg-[#00B074] text-white shadow-xs'
+                          ? 'bg-[#0A9D8F] text-white shadow-xs'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
@@ -498,7 +498,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 py-3 bg-[#00B074] hover:bg-[#00905D] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-[#0A9D8F] hover:bg-[#087A6F] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <span>Saving to Supabase...</span>

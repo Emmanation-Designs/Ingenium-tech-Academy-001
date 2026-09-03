@@ -158,17 +158,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
       const fetchedEnrollments = await dataService.enrollments.getEnrollments(currentUser.id);
       setEnrollments(fetchedEnrollments);
 
-      const demoNotifications: Notification[] = [
-        {
-          id: 'notif-1',
-          user_id: currentUser.id,
-          title: 'Welcome to Ingenium!',
-          message: 'Explore our catalog of professional courses and begin your customized learning journey today.',
-          is_read: false,
-          created_at: new Date().toISOString()
-        }
-      ];
-      setNotifications(demoNotifications);
+      // No fake/demo notifications - notifications are loaded from genuine data or empty state
+      setNotifications([]);
     } catch (e) {
       console.error("Error loading student data", e);
     } finally {
@@ -294,7 +285,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#00B074]/30">
+    <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#0A9D8F]/30">
       
       {/* Mobile Frame Simulator */}
       <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col justify-between border-x border-[#EAEAEA]">
@@ -318,9 +309,9 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
               {/* Local timezone alert banner */}
-              <div className="bg-[#EAFBF3] border border-[#00B074]/30 p-4 rounded-2xl flex items-start gap-3">
-                <Globe className="w-4 h-4 text-[#00875A] shrink-0 mt-0.5" />
-                <p className="text-xs font-medium text-[#00875A] leading-relaxed">
+              <div className="bg-[#E6F5F4] border border-[#0A9D8F]/30 p-4 rounded-2xl flex items-start gap-3">
+                <Globe className="w-4 h-4 text-[#087A6F] shrink-0 mt-0.5" />
+                <p className="text-xs font-medium text-[#087A6F] leading-relaxed">
                   All times are shown in your local time zone ({currentUser.timezone || 'Africa/Lagos'})
                 </p>
               </div>
@@ -343,14 +334,14 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                           onClick={() => setChosenScheduleId(sch.id)}
                           className={`border p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
                             isSelected 
-                              ? 'border-[#00B074] bg-[#00B074]/5' 
+                              ? 'border-[#0A9D8F] bg-[#0A9D8F]/5' 
                               : 'border-[#EAEAEA] hover:border-zinc-300'
                           }`}
                         >
                           <div className="flex items-center gap-3.5">
                             {/* Custom Radio Button */}
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
-                              isSelected ? 'border-[#00B074] bg-[#00B074]' : 'border-zinc-300 bg-white'
+                              isSelected ? 'border-[#0A9D8F] bg-[#0A9D8F]' : 'border-zinc-300 bg-white'
                             }`}>
                               {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
                             </div>
@@ -366,8 +357,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                           {/* Seats Counter Badge */}
                           <div className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                             isSelected 
-                              ? 'bg-[#00B074]/15 text-[#00875A]' 
-                              : 'bg-[#EAFBF3] text-[#00875A]'
+                              ? 'bg-[#0A9D8F]/15 text-[#087A6F]' 
+                              : 'bg-[#E6F5F4] text-[#087A6F]'
                           }`}>
                             {sch.capacity ? `${sch.capacity} Seats left` : '12 Seats left'}
                           </div>
@@ -384,7 +375,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               <button 
                 onClick={handleSelectCourse}
                 disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
-                className="w-full py-3.5 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-sm font-semibold transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-sm font-semibold transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
               >
                 {loading ? 'Adding...' : 'Add to My Selection'}
               </button>
@@ -428,7 +419,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               {/* Course Title and Badges */}
               <div className="px-6 pt-5 space-y-4">
                 <div className="flex">
-                  <span className="bg-[#EAFBF3] text-[#00875A] text-xs font-semibold px-3 py-1 rounded-md">
+                  <span className="bg-[#E6F5F4] text-[#087A6F] text-xs font-semibold px-3 py-1 rounded-md">
                     {selectedCourseForDetails.category || 'Technology'}
                   </span>
                 </div>
@@ -444,17 +435,17 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 {/* 3 Circular Horizontal Stat Info Boxes */}
                 <div className="grid grid-cols-3 gap-3 pt-2">
                   <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
-                    <Clock className="w-4 h-4 text-[#00B074]" />
+                    <Clock className="w-4 h-4 text-[#0A9D8F]" />
                     <span className="text-[10px] text-zinc-400 font-medium">Duration</span>
                     <span className="text-xs font-semibold text-zinc-900">8 Weeks</span>
                   </div>
                   <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
-                    <BarChart2 className="w-4 h-4 text-[#00B074]" />
+                    <BarChart2 className="w-4 h-4 text-[#0A9D8F]" />
                     <span className="text-[10px] text-zinc-400 font-medium">Level</span>
                     <span className="text-xs font-semibold text-zinc-900">Beginner</span>
                   </div>
                   <div className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex flex-col items-center text-center space-y-1">
-                    <Video className="w-4 h-4 text-[#00B074]" />
+                    <Video className="w-4 h-4 text-[#0A9D8F]" />
                     <span className="text-[10px] text-zinc-400 font-medium">Mode</span>
                     <span className="text-xs font-semibold text-zinc-900">Live Online</span>
                   </div>
@@ -479,7 +470,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                       'Hands-on projects to launch a brilliant portfolio'
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2.5">
-                        <div className="w-4 h-4 rounded-full bg-[#00B074] flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-4 h-4 rounded-full bg-[#0A9D8F] flex items-center justify-center shrink-0 mt-0.5">
                           <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
                         </div>
                         <span className="text-xs text-zinc-700 font-normal">{item}</span>
@@ -494,7 +485,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             {/* Sticky Details Footer */}
             <div className="px-6 py-4 border-t border-[#F2F2F2] bg-white flex items-center justify-between gap-4 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
               <div>
-                <span className="block text-[#00B074] text-lg font-bold leading-none">
+                <span className="block text-[#0A9D8F] text-lg font-bold leading-none">
                   {getCoursePriceAndCurrency(selectedCourseForDetails).symbol}
                   {Number(getCoursePriceAndCurrency(selectedCourseForDetails).price).toLocaleString()}
                 </span>
@@ -511,7 +502,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   }
                   setShowClassTimeSelector(true);
                 }}
-                className="flex-1 py-3.5 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-sm font-semibold transition-all text-center shadow-sm cursor-pointer active:scale-98"
+                className="flex-1 py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-sm font-semibold transition-all text-center shadow-sm cursor-pointer active:scale-98"
               >
                 Choose Class Time
               </button>
@@ -526,11 +517,11 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5]">
               <div className="flex items-center gap-2.5">
                 {/* Logo Brand Icon */}
-                <div className="w-8 h-8 rounded-lg bg-[#00B074] flex items-center justify-center text-white text-sm shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-[#0A9D8F] flex items-center justify-center text-white text-sm shadow-xs">
                   <span className="font-bold text-base tracking-tighter">I</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-xs tracking-wider text-[#00B074] leading-tight">
+                  <span className="font-bold text-xs tracking-wider text-[#0A9D8F] leading-tight">
                     INGENIUM
                   </span>
                   <span className="font-semibold text-[8px] tracking-[0.16em] text-zinc-900 leading-none">
@@ -545,7 +536,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 className="p-2 rounded-full hover:bg-zinc-100 transition-colors relative"
               >
                 <Bell className="w-4 h-4 text-black" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#00B074]"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#0A9D8F]"></span>
               </button>
             </div>
 
@@ -571,13 +562,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     placeholder="Search courses"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-50 border border-zinc-200/80 rounded-xl font-normal text-zinc-800 focus:outline-none focus:border-[#00B074] placeholder:text-zinc-400"
+                    className="w-full pl-9 pr-4 py-2.5 text-xs bg-zinc-50 border border-zinc-200/80 rounded-xl font-normal text-zinc-800 focus:outline-none focus:border-[#0A9D8F] placeholder:text-zinc-400"
                   />
                 </div>
                 {/* Filter sliders button */}
                 <button 
                   onClick={() => setSelectedCategoryId('')}
-                  className="p-2.5 rounded-xl bg-[#00B074] text-white hover:bg-[#00925F] transition-all flex items-center justify-center shrink-0 shadow-sm cursor-pointer"
+                  className="p-2.5 rounded-xl bg-[#0A9D8F] text-white hover:bg-[#087A6F] transition-all flex items-center justify-center shrink-0 shadow-sm cursor-pointer"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                 </button>
@@ -589,7 +580,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   <h3 className="text-sm font-semibold text-zinc-900">Categories</h3>
                   <button 
                     onClick={() => setSelectedCategoryId('')}
-                    className="text-xs font-medium text-[#00B074] hover:underline cursor-pointer"
+                    className="text-xs font-medium text-[#0A9D8F] hover:underline cursor-pointer"
                   >
                     See all
                   </button>
@@ -605,7 +596,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     <div
                       className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                         !selectedCategoryId 
-                          ? 'bg-[#00B074] text-white shadow-xs' 
+                          ? 'bg-[#0A9D8F] text-white shadow-xs' 
                           : 'bg-[#F8F9FA] border border-zinc-200/80 text-zinc-700 hover:border-zinc-300'
                       }`}
                     >
@@ -630,7 +621,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         <div
                           className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                             isSelected 
-                              ? 'bg-[#00B074] text-white shadow-xs' 
+                              ? 'bg-[#0A9D8F] text-white shadow-xs' 
                               : 'bg-[#F8F9FA] border border-zinc-200/80 text-zinc-700 hover:border-zinc-300'
                           }`}
                         >
@@ -656,7 +647,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                       setSearchQuery('');
                       setSelectedCategoryId('');
                     }}
-                    className="text-xs font-medium text-[#00B074] hover:underline cursor-pointer"
+                    className="text-xs font-medium text-[#0A9D8F] hover:underline cursor-pointer"
                   >
                     See all
                   </button>
@@ -686,7 +677,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                               referrerPolicy="no-referrer"
                             />
                             {/* Floating category badge top left */}
-                            <span className="absolute top-3 left-3 bg-[#00B074] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs">
+                            <span className="absolute top-3 left-3 bg-[#0A9D8F] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs">
                               {course.category || 'Technology'}
                             </span>
                             {/* Heart icon top right */}
@@ -708,7 +699,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                             <div className="flex items-center justify-between pt-1 text-xs text-zinc-500 font-normal">
                               <div className="flex items-center gap-3">
                                 <span className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5 text-[#00B074]" />
+                                  <Clock className="w-3.5 h-3.5 text-[#0A9D8F]" />
                                   <span>8 Weeks</span>
                                 </span>
                                 <span>•</span>
@@ -717,7 +708,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                                   <span>Beginner</span>
                                 </span>
                               </div>
-                              <span className="text-sm font-bold text-[#00B074]">
+                              <span className="text-sm font-bold text-[#0A9D8F]">
                                 {pricingInfo.symbol}{Number(pricingInfo.price).toLocaleString()}
                               </span>
                             </div>
@@ -756,13 +747,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   onClick={() => setSelectionFilter(tab.key as any)}
                   className={`py-3 text-xs font-medium transition-all relative cursor-pointer ${
                     selectionFilter === tab.key 
-                      ? 'text-[#00B074] font-semibold' 
+                      ? 'text-[#0A9D8F] font-semibold' 
                       : 'text-zinc-500 hover:text-zinc-800'
                   }`}
                 >
                   {tab.label}
                   {selectionFilter === tab.key && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074] rounded-full" />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0A9D8F] rounded-full" />
                   )}
                 </button>
               ))}
@@ -808,7 +799,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                             <div className="mt-1 flex items-center">
                               <span className={`text-xs font-medium capitalize ${
                                 sel.status === 'approved' 
-                                  ? 'text-[#00875A]' 
+                                  ? 'text-[#087A6F]' 
                                   : sel.status === 'rejected'
                                   ? 'text-red-500'
                                   : 'text-amber-500'
@@ -820,7 +811,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
                           {/* Price Snapshot on right */}
                           <div className="text-right shrink-0">
-                            <span className="text-xs font-bold text-[#00B074]">
+                            <span className="text-xs font-bold text-[#0A9D8F]">
                               {sel.currency_snapshot === 'NGN' ? '₦' : sel.currency_snapshot === 'EUR' ? '€' : '$'}
                               {Number(sel.price_snapshot || 0).toLocaleString()}
                             </span>
@@ -844,8 +835,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Bottom Waiting Alert Box */}
-            <div className="p-4 mx-6 mb-6 bg-[#EAFBF3] border border-[#00B074]/30 rounded-2xl">
-              <p className="text-xs font-medium text-[#00875A] text-center leading-relaxed">
+            <div className="p-4 mx-6 mb-6 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl">
+              <p className="text-xs font-medium text-[#087A6F] text-center leading-relaxed">
                 Your course selections are waiting for admin approval. You will be notified once a course is approved.
               </p>
             </div>
@@ -864,11 +855,11 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               {enrollments.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 pt-20">
                   {/* Graduation cap illustration with soft green circle and sparkles */}
-                  <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-[#EAFBF3]">
-                    <GraduationCap className="w-14 h-14 text-[#00875A]" />
-                    <Sparkles className="w-4 h-4 text-[#00B074] absolute top-2 right-4 animate-pulse" />
-                    <span className="w-2 h-2 rounded-full bg-[#00B074] absolute bottom-3 left-4"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00B074]/60 absolute top-5 left-5"></span>
+                  <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-[#E6F5F4]">
+                    <GraduationCap className="w-14 h-14 text-[#087A6F]" />
+                    <Sparkles className="w-4 h-4 text-[#0A9D8F] absolute top-2 right-4 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[#0A9D8F] absolute bottom-3 left-4"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0A9D8F]/60 absolute top-5 left-5"></span>
                   </div>
 
                   <div className="space-y-1.5 max-w-[280px]">
@@ -882,7 +873,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
                   <button 
                     onClick={() => setActiveTab('home')}
-                    className="px-8 py-3 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-xs font-semibold shadow-sm transition-all active:scale-98 cursor-pointer"
+                    className="px-8 py-3 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold shadow-sm transition-all active:scale-98 cursor-pointer"
                   >
                     Explore Courses
                   </button>
@@ -918,7 +909,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         <div className="pt-2 border-t border-[#F5F5F5] space-y-2.5 text-xs">
                           <div className="flex justify-between items-center">
                             <span className="font-normal text-zinc-500">Syllabus Complete</span>
-                            <span className="font-semibold text-[#00B074]">0%</span>
+                            <span className="font-semibold text-[#0A9D8F]">0%</span>
                           </div>
 
                           <div className="p-3 bg-zinc-50 rounded-xl space-y-1">
@@ -942,7 +933,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <div className="flex-1 flex flex-col bg-white">
             
             {/* Elegant Solid green top card */}
-            <div className="bg-[#00B074] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs">
+            <div className="bg-[#0A9D8F] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs">
               <h2 className="text-sm font-semibold uppercase tracking-wider">Student Profile</h2>
               
               {/* User photo matching Screen 6 */}
@@ -956,7 +947,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   />
                 </div>
                 {/* Green pencil edit button on lower right */}
-                <button className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#00B074] text-white shadow-sm border-2 border-white hover:scale-105 transition-transform cursor-pointer">
+                <button className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#0A9D8F] text-white shadow-sm border-2 border-white hover:scale-105 transition-transform cursor-pointer">
                   <Pencil className="w-3 h-3 stroke-[2.5]" />
                 </button>
               </div>
@@ -975,9 +966,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden divide-y divide-[#F5F5F5] shadow-xs">
                 <div className="p-3.5 flex items-center justify-between text-xs">
                   <span className="font-normal text-zinc-500">Country</span>
-                  <span className="font-semibold text-zinc-900 flex items-center gap-1.5">
+                  <span className="font-semibold text-zinc-900">
                     {currentUser.country || 'Nigeria'}
-                    <span>🇳🇬</span>
                   </span>
                 </div>
                 <div className="p-3.5 flex items-center justify-between text-xs">
@@ -999,7 +989,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                           setPhoneError(null);
                           setIsAddingPhone(true);
                         }}
-                        className="text-zinc-400 hover:text-[#00B074] transition-colors p-0.5 cursor-pointer"
+                        className="text-zinc-400 hover:text-[#0A9D8F] transition-colors p-0.5 cursor-pointer"
                         title="Edit Phone"
                         aria-label="Edit Phone Number"
                       >
@@ -1013,7 +1003,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         setPhoneError(null);
                         setIsAddingPhone(true);
                       }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EAFBF3] hover:bg-[#00B074]/20 text-[#00875A] font-semibold text-xs transition-colors cursor-pointer active:scale-95"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#E6F5F4] hover:bg-[#0A9D8F]/20 text-[#087A6F] font-semibold text-xs transition-colors cursor-pointer active:scale-95"
                       aria-label="Add Phone Number"
                     >
                       <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -1065,7 +1055,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <button
             onClick={() => setActiveTab('home')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'home' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'home' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
             <HomeIcon className={`w-5 h-5 stroke-[2] ${activeTab === 'home' ? 'fill-current' : ''}`} />
@@ -1075,7 +1065,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <button
             onClick={() => setActiveTab('selections')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'selections' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'selections' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
             <Heart className={`w-5 h-5 stroke-[2] ${activeTab === 'selections' ? 'fill-current' : ''}`} />
@@ -1085,7 +1075,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <button
             onClick={() => setActiveTab('learning')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'learning' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'learning' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
             <BookOpen className={`w-5 h-5 stroke-[2] ${activeTab === 'learning' ? 'fill-current' : ''}`} />
@@ -1095,7 +1085,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <button
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'profile' ? 'text-[#00B074] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'profile' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
             <User className={`w-5 h-5 stroke-[2] ${activeTab === 'profile' ? 'fill-current' : ''}`} />
@@ -1110,7 +1100,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             <div className="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-zinc-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-[#EAFBF3] text-[#00B074]">
+                  <div className="p-2 rounded-xl bg-[#E6F5F4] text-[#0A9D8F]">
                     <Phone className="w-4 h-4" />
                   </div>
                   <h3 className="text-sm font-semibold text-zinc-900">
@@ -1147,7 +1137,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         setPhoneInput(e.target.value);
                         setPhoneError(null);
                       }}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-zinc-50 border border-zinc-200 rounded-xl font-medium text-zinc-900 focus:outline-none focus:border-[#00B074] focus:ring-1 focus:ring-[#00B074]/30"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-zinc-50 border border-zinc-200 rounded-xl font-medium text-zinc-900 focus:outline-none focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30"
                     />
                   </div>
                   {phoneError && (
@@ -1169,7 +1159,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   <button
                     type="submit"
                     disabled={savingPhone || !phoneInput.trim()}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#00B074] hover:bg-[#00925F] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer transition-all active:scale-98 flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer transition-all active:scale-98 flex items-center justify-center gap-1.5"
                   >
                     {savingPhone ? 'Saving...' : 'Save Phone'}
                   </button>

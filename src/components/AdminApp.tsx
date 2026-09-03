@@ -209,13 +209,23 @@ export const AdminApp: React.FC<AdminAppProps> = ({
 
   // Selection Handlers
   const handleApproveSelection = async (selectionId: string) => {
-    await dataService.approveCourseSelection(selectionId);
-    await loadData();
+    try {
+      await dataService.approveCourseSelection(selectionId, currentUser?.id);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to approve course selection:', err);
+      throw err;
+    }
   };
 
   const handleRejectSelection = async (selectionId: string) => {
-    await dataService.rejectCourseSelection(selectionId);
-    await loadData();
+    try {
+      await dataService.rejectCourseSelection(selectionId, currentUser?.id);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to reject course selection:', err);
+      throw err;
+    }
   };
 
   // Category Handlers
@@ -259,7 +269,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
             setEditingCourse(null);
             setIsCreatingCourse(true);
           }}
-          className="inline-flex items-center gap-1.5 bg-[#00B074] hover:bg-[#00905D] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+          className="inline-flex items-center gap-1.5 bg-[#0A9D8F] hover:bg-[#087A6F] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
         >
           <Plus className="w-4 h-4" />
           <span>Add Course</span>
@@ -301,7 +311,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-4 md:py-6">
         {loading && (
           <div className="flex items-center justify-center py-12 gap-2 text-xs font-semibold text-gray-500">
-            <RefreshCw className="w-4 h-4 animate-spin text-[#00B074]" />
+            <RefreshCw className="w-4 h-4 animate-spin text-[#0A9D8F]" />
             <span>Syncing authoritative Supabase records...</span>
           </div>
         )}
@@ -401,7 +411,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                             <h4 className="text-xs font-bold text-gray-950">{c.title}</h4>
                             <p className="text-[11px] text-gray-400">{c.duration || '8 Weeks'} • {count} active schedules</p>
                           </div>
-                          <span className="text-xs font-bold text-[#00B074] hover:underline">
+                          <span className="text-xs font-bold text-[#0A9D8F] hover:underline">
                             Configure →
                           </span>
                         </div>
@@ -430,12 +440,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                 courses={courses}
                 selectedStudent={selectedStudent}
                 onSelectStudent={setSelectedStudent}
+                onApproveSelection={handleApproveSelection}
+                onRejectSelection={handleRejectSelection}
               />
             )}
 
             {activeTab === 'instructors' && (
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs text-center space-y-3 pb-20">
-                <div className="w-12 h-12 rounded-full bg-[#EAFBF3] text-[#00B074] flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center mx-auto">
                   <GraduationCap className="w-6 h-6" />
                 </div>
                 <h3 className="text-sm font-bold text-gray-950">Instructors Management</h3>
@@ -449,14 +461,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({
               <div className="space-y-4 pb-20">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-gray-950">Active Student Enrollments</h3>
-                  <span className="text-xs font-bold text-[#00B074] bg-[#EAFBF3] px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-[#0A9D8F] bg-[#E6F5F4] px-2.5 py-0.5 rounded-full">
                     {enrollments.length} Total
                   </span>
                 </div>
 
                 {enrollments.length === 0 ? (
                   <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center shadow-xs">
-                    <ShieldCheck className="w-10 h-10 text-[#00B074] mx-auto mb-2 opacity-80" />
+                    <ShieldCheck className="w-10 h-10 text-[#0A9D8F] mx-auto mb-2 opacity-80" />
                     <p className="text-xs font-bold text-gray-900">No active enrollments yet.</p>
                     <p className="text-[11px] text-gray-400 mt-1">
                       Enrollments are created when student course requests are approved.
@@ -474,7 +486,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                           <p className="text-[11px] text-gray-500 font-medium">{enr.course_title || 'Course'}</p>
                           <p className="text-[10px] text-gray-400 mt-0.5">{enr.schedule_label || 'Assigned Schedule'}</p>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAFBF3] text-[#00B074]">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F]">
                           Active
                         </span>
                       </div>
@@ -486,7 +498,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
 
             {activeTab === 'reports' && (
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs text-center space-y-3 pb-20">
-                <div className="w-12 h-12 rounded-full bg-[#EAFBF3] text-[#00B074] flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center mx-auto">
                   <BarChart2 className="w-6 h-6" />
                 </div>
                 <h3 className="text-sm font-bold text-gray-950">Analytics & Reports</h3>
@@ -508,7 +520,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                     <div>
                       <p className="text-xs font-bold text-gray-900">{currentUser.full_name}</p>
                       <p className="text-[11px] text-gray-500">{currentUser.email}</p>
-                      <span className="text-[10px] font-bold text-[#00B074] uppercase tracking-wider">
+                      <span className="text-[10px] font-bold text-[#0A9D8F] uppercase tracking-wider">
                         {currentUser.role}
                       </span>
                     </div>

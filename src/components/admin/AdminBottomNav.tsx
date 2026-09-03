@@ -20,7 +20,7 @@ export const AdminBottomNav: React.FC<AdminBottomNavProps> = ({
       <button
         onClick={() => onSelectTab('dashboard')}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'dashboard' ? 'text-[#00B074]' : 'text-gray-400 hover:text-gray-600'
+          activeTab === 'dashboard' ? 'text-[#0A9D8F]' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         <Home className="w-5 h-5" />
@@ -30,7 +30,7 @@ export const AdminBottomNav: React.FC<AdminBottomNavProps> = ({
       <button
         onClick={() => onSelectTab('courses')}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'courses' ? 'text-[#00B074]' : 'text-gray-400 hover:text-gray-600'
+          activeTab === 'courses' ? 'text-[#0A9D8F]' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         <BookOpen className="w-5 h-5" />
@@ -40,12 +40,12 @@ export const AdminBottomNav: React.FC<AdminBottomNavProps> = ({
       <button
         onClick={() => onSelectTab('requests')}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer relative ${
-          activeTab === 'requests' ? 'text-[#00B074]' : 'text-gray-400 hover:text-gray-600'
+          activeTab === 'requests' ? 'text-[#0A9D8F]' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         <Inbox className="w-5 h-5" />
         {pendingRequestsCount > 0 && (
-          <span className="absolute top-0 right-3 w-4 h-4 bg-[#00B074] text-white text-[9px] font-black rounded-full flex items-center justify-center">
+          <span className="absolute top-0 right-3 w-4 h-4 bg-[#0A9D8F] text-white text-[9px] font-black rounded-full flex items-center justify-center">
             {pendingRequestsCount}
           </span>
         )}
@@ -55,7 +55,7 @@ export const AdminBottomNav: React.FC<AdminBottomNavProps> = ({
       <button
         onClick={() => onSelectTab('students')}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'students' ? 'text-[#00B074]' : 'text-gray-400 hover:text-gray-600'
+          activeTab === 'students' ? 'text-[#0A9D8F]' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         <Users className="w-5 h-5" />
