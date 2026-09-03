@@ -13,7 +13,7 @@ export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
   const [loading, setLoading] = useState<boolean>(true);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('ingenium_theme') as 'light' | 'dark') || 'dark';
+    return (localStorage.getItem('ingenium_theme') as 'light' | 'dark') || 'light';
   });
 
   // Apply theme class on root element
@@ -108,7 +108,7 @@ export default function App() {
 
   // 3. Authenticated Role views
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-[#00B074]/20 font-sans">
+    <div className={`min-h-screen ${currentRole === 'admin' ? 'bg-[#F8FAFC] text-[#111827]' : (theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white')} selection:bg-[#00B074]/20 font-sans`}>
       
       {currentRole === 'admin' ? (
         <AdminApp 

@@ -598,6 +598,23 @@ export const dataService = {
       }
     },
 
+    async getInstructors(): Promise<Profile[]> {
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('role', ['admin', 'instructor'])
+            .order('created_at', { ascending: false });
+          return (data as Profile[]) || [];
+        } catch {
+          return [];
+        }
+      } else {
+        return getLocalData<Profile>('profiles').filter(p => p.role === 'admin' || (p.role as string) === 'instructor');
+      }
+    },
+
     // Dev/Testing helper to assign Admin roles
     async toggleDevRole(id: string, role: UserRole): Promise<Profile | null> {
       if (isSupabaseConfigured && supabase) {
@@ -760,8 +777,7 @@ export const dataService = {
       const foundLocal = pricings.find(p => p.course_id === normalizedCourseId || p.course_id === courseId);
       if (foundLocal) return foundLocal;
 
-      const defaultMatch = DEFAULT_COURSES.find(c => c.id === normalizedCourseId || c.id === courseId);
-      return defaultMatch?.pricing || null;
+      return null;
     },
 
     async updatePricing(pricing: Omit<CoursePricing, 'id' | 'created_at' | 'updated_at'> | Partial<CoursePricing> & { course_id: string }): Promise<CoursePricing> {
@@ -820,9 +836,9 @@ export const dataService = {
             coursesData = [];
           }
 
-          // If no courses found in database, return the complete default catalog
+          // If no courses found in database, return empty array (real database state)
           if (coursesData.length === 0) {
-            return DEFAULT_COURSES;
+            return [];
           }
 
           // 2. Fetch pricing table safely in parallel (without schema cache join dependency)
@@ -843,7 +859,7 @@ export const dataService = {
           try {
             categories = await dataService.categories.getCategories();
           } catch {
-            categories = DEFAULT_CATEGORIES;
+            categories = [];
           }
           const catMap = new Map<string, string>();
           for (const cat of categories) {
@@ -860,8 +876,7 @@ export const dataService = {
               || 'Uncategorized';
 
             const foundPricing = pricingData.find(p => p.course_id === c.id || p.course_id === normCourseId)
-              || localPricings.find(p => p.course_id === c.id || p.course_id === normCourseId)
-              || DEFAULT_COURSES.find(d => d.id === c.id || d.id === normCourseId)?.pricing;
+              || localPricings.find(p => p.course_id === c.id || p.course_id === normCourseId);
 
             return {
               ...c,
@@ -870,7 +885,7 @@ export const dataService = {
             };
           }) as Course[];
         } catch {
-          return DEFAULT_COURSES;
+          return [];
         }
       } else {
         let courses = getLocalData<Course>('courses');
@@ -894,16 +909,6 @@ export const dataService = {
           }
         }
 
-        if (courses.length === 0) {
-          courses = [...DEFAULT_COURSES];
-          setLocalData('courses', courses);
-          
-          const defaultPricings = DEFAULT_COURSES.map(c => c.pricing).filter(Boolean) as CoursePricing[];
-          setLocalData('course_pricing', defaultPricings);
-          setLocalData('schedules', DEFAULT_SCHEDULES);
-          pricings = defaultPricings;
-        }
-
         return courses.map(c => {
           const pricing = pricings.find(p => p.course_id === c.id) || c.pricing;
           const categoryObj = categories.find(cat => cat.id === c.category_id || cat.name.toLowerCase().trim() === (c.category || '').toLowerCase().trim());
@@ -917,16 +922,18 @@ export const dataService = {
       }
     },
 
-    async getCourseSchedules(courseId: string, activeOnly: boolean = true): Promise<CourseSchedule[]> {
+    async getCourseSchedules(courseId?: string, activeOnly: boolean = false): Promise<CourseSchedule[]> {
       let list: CourseSchedule[] = [];
-      const normalizedCourseId = normalizeToUUID(courseId) || courseId;
+      const normalizedCourseId = courseId ? (normalizeToUUID(courseId) || courseId) : undefined;
 
-      if (isSupabaseConfigured && supabase && isValidUUID(normalizedCourseId)) {
+      if (isSupabaseConfigured && supabase) {
         try {
           let query = supabase
             .from('course_schedules')
-            .select('*')
-            .eq('course_id', normalizedCourseId);
+            .select('*');
+          if (normalizedCourseId && isValidUUID(normalizedCourseId)) {
+            query = query.eq('course_id', normalizedCourseId);
+          }
           if (activeOnly) {
             query = query.eq('is_active', true);
           }
@@ -936,17 +943,11 @@ export const dataService = {
           list = [];
         }
       } else {
-        const all = getLocalData<CourseSchedule>('schedules').filter(s => s.course_id === courseId || s.course_id === normalizedCourseId);
-        list = activeOnly ? all.filter(s => s.is_active) : all;
+        const all = getLocalData<CourseSchedule>('schedules');
+        const filtered = normalizedCourseId ? all.filter(s => s.course_id === courseId || s.course_id === normalizedCourseId) : all;
+        list = activeOnly ? filtered.filter(s => s.is_active) : filtered;
       }
 
-      // Fallback to default schedules for this course if none found
-      if (list.length === 0) {
-        const defaultsForCourse = DEFAULT_SCHEDULES.filter(s => s.course_id === courseId || s.course_id === normalizedCourseId);
-        if (defaultsForCourse.length > 0) {
-          return defaultsForCourse;
-        }
-      }
       return list;
     },
 
@@ -1031,6 +1032,20 @@ export const dataService = {
         courses[index] = updated;
         setLocalData('courses', courses);
         return updated;
+      }
+    },
+
+    async deleteCourse(id: string): Promise<void> {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase
+          .from('courses')
+          .delete()
+          .eq('id', id);
+        if (error) throw new Error(error.message);
+      } else {
+        const courses = getLocalData<Course>('courses');
+        const filtered = courses.filter(c => c.id !== id);
+        setLocalData('courses', filtered);
       }
     },
 
@@ -1367,11 +1382,9 @@ export const dataService = {
         const key2 = `${local.student_id}_${normCourseId}`;
 
         if (!existingIds.has(local.id) && !existingRefs.has(local.reference_id) && !existingCourseKeys.has(key1) && !existingCourseKeys.has(key2)) {
-          const course = courses.find(c => c.id === local.course_id || c.id === normCourseId) || 
-            DEFAULT_COURSES.find(c => c.id === local.course_id || c.id === normCourseId);
+          const course = courses.find(c => c.id === local.course_id || c.id === normCourseId);
           const student = profiles.find(p => p.id === local.student_id);
-          const schedule = schedules.find(sc => sc.id === local.schedule_id) ||
-            DEFAULT_SCHEDULES.find(sc => sc.id === local.schedule_id);
+          const schedule = schedules.find(sc => sc.id === local.schedule_id);
 
           const meta = metaMap[local.id] || metaMap[local.reference_id] || {};
           dbList.push({
@@ -1564,10 +1577,8 @@ export const dataService = {
         const key2 = `${e.student_id}_${normCourseId}`;
 
         if (!existingIds.has(e.id) && !existingCourseKeys.has(key1) && !existingCourseKeys.has(key2)) {
-          const course = courses.find(c => c.id === e.course_id || c.id === normCourseId) ||
-            DEFAULT_COURSES.find(c => c.id === e.course_id || c.id === normCourseId);
-          const schedule = schedules.find(sc => sc.id === e.schedule_id) ||
-            DEFAULT_SCHEDULES.find(sc => sc.id === e.schedule_id);
+          const course = courses.find(c => c.id === e.course_id || c.id === normCourseId);
+          const schedule = schedules.find(sc => sc.id === e.schedule_id);
 
           dbList.push({
             ...e,
@@ -1692,5 +1703,81 @@ export const dataService = {
         }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
     }
+  },
+
+  // 7. CONVENIENCE / FLAT DELEGATORS (for multi-dashboard interoperability)
+  getCourses(): Promise<Course[]> {
+    return dataService.courses.getCourses();
+  },
+  createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<Course> {
+    return dataService.courses.createCourse(course);
+  },
+  updateCourse(id: string, updates: Partial<Course>): Promise<Course> {
+    return dataService.courses.updateCourse(id, updates);
+  },
+  deleteCourse(id: string): Promise<void> {
+    return dataService.courses.deleteCourse(id);
+  },
+  uploadCourseImage(file: File, courseId?: string): Promise<string> {
+    const targetId = courseId || generateValidUUID();
+    return dataService.courses.uploadHeroImage(targetId, file);
+  },
+  saveCoursePricing(courseId: string, pricing: { usd_price: number; ngn_price: number; eur_price: number }): Promise<CoursePricing> {
+    return dataService.pricing.updatePricing({ course_id: courseId, ...pricing });
+  },
+  getCategories(): Promise<CourseCategory[]> {
+    return dataService.categories.getCategories();
+  },
+  async createCategory(name: string, file?: File | null): Promise<CourseCategory> {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'category';
+    const newCat = await dataService.categories.createCategory({
+      name,
+      slug,
+      is_active: true
+    });
+    if (file && newCat.id) {
+      try {
+        const url = await dataService.categories.uploadCategoryImage(newCat.id, file);
+        if (url) {
+          return await dataService.categories.updateCategory(newCat.id, { image_url: url });
+        }
+      } catch (e) {
+        console.warn('Failed to upload category image:', e);
+      }
+    }
+    return newCat;
+  },
+  updateCategory(id: string, updates: Partial<CourseCategory>): Promise<CourseCategory> {
+    return dataService.categories.updateCategory(id, updates);
+  },
+  getCourseSchedules(courseId?: string, activeOnly: boolean = false): Promise<CourseSchedule[]> {
+    return dataService.courses.getCourseSchedules(courseId, activeOnly);
+  },
+  createCourseSchedule(schedule: Omit<CourseSchedule, 'id' | 'created_at' | 'updated_at'>): Promise<CourseSchedule> {
+    return dataService.courses.createCourseSchedule(schedule);
+  },
+  updateCourseSchedule(id: string, updates: Partial<CourseSchedule>): Promise<CourseSchedule> {
+    return dataService.courses.updateCourseSchedule(id, updates);
+  },
+  deleteCourseSchedule(id: string): Promise<void> {
+    return dataService.courses.deleteCourseSchedule(id);
+  },
+  getCourseSelections(studentId?: string): Promise<CourseSelection[]> {
+    return dataService.selections.getCourseSelections(studentId);
+  },
+  approveCourseSelection(selectionId: string, adminId?: string): Promise<void> {
+    return dataService.selections.updateSelectionStatus(selectionId, 'approved', adminId || 'admin');
+  },
+  rejectCourseSelection(selectionId: string, adminId?: string): Promise<void> {
+    return dataService.selections.updateSelectionStatus(selectionId, 'rejected', adminId || 'admin');
+  },
+  getEnrollments(studentId?: string): Promise<Enrollment[]> {
+    return dataService.enrollments.getEnrollments(studentId);
+  },
+  getStudents(): Promise<Profile[]> {
+    return dataService.profile.getStudents();
+  },
+  getInstructors(): Promise<Profile[]> {
+    return dataService.profile.getInstructors();
   }
 };
