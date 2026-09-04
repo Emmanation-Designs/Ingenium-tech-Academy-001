@@ -69,6 +69,8 @@ export interface CourseSchedule {
   end_time: string;
   timezone: string;
   is_active: boolean;
+  teacher_id?: string;
+  meeting_url?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -145,6 +147,37 @@ export interface ClassSession {
   status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface TeacherInvitation {
+  id: string;
+  invited_email: string;
+  token: string;
+  invited_by?: string;
+  status: InvitationStatus;
+  expires_at: string;
+  accepted_at?: string;
+  accepted_user_id?: string;
+  created_at: string;
+  updated_at: string;
+  inviter_name?: string;
+  accepted_teacher_name?: string;
+}
+
+export interface TeacherCourseAssignment {
+  id: string;
+  teacher_id: string;
+  course_id: string;
+  schedule_id?: string;
+  assigned_by?: string;
+  created_at: string;
+  updated_at: string;
+  course_title?: string;
+  schedule_label?: string;
+  teacher_name?: string;
+  teacher_email?: string;
 }
 
 export interface Notification {

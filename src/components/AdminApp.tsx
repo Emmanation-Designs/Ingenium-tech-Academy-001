@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Profile, Course, CourseCategory, CourseSchedule, CourseSelection, Enrollment, TrainingMode } from '../types';
+import { 
+  Profile, Course, CourseCategory, CourseSchedule, CourseSelection, 
+  Enrollment, TrainingMode, TeacherInvitation, TeacherCourseAssignment 
+} from '../types';
 import { dataService } from '../services/dataService';
+import { realtimeSync } from '../services/realtimeSync';
 import { AdminHeader } from './admin/AdminHeader';
 import { AdminSidebar, AdminTab } from './admin/AdminSidebar';
 import { AdminBottomNav } from './admin/AdminBottomNav';
@@ -11,6 +15,7 @@ import { AdminClassTimes } from './admin/AdminClassTimes';
 import { AdminRequests } from './admin/AdminRequests';
 import { AdminStudents } from './admin/AdminStudents';
 import { AdminCategories } from './admin/AdminCategories';
+import { AdminTeachers } from './admin/AdminTeachers';
 import { Plus, RefreshCw, LogOut, ShieldCheck, BarChart2, GraduationCap, Settings } from 'lucide-react';
 
 interface AdminAppProps {
@@ -37,6 +42,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
 
   // Supabase Data State
   const [loading, setLoading] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<CourseCategory[]>([]);
   const [schedules, setSchedules] = useState<CourseSchedule[]>([]);
@@ -44,11 +51,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [instructors, setInstructors] = useState<Profile[]>([]);
+  const [teachers, setTeachers] = useState<Profile[]>([]);
+  const [invitations, setInvitations] = useState<TeacherInvitation[]>([]);
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherCourseAssignment[]>([]);
 
   // Fetch all authoritative records from Supabase
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isBackground: boolean = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) {
+        setLoading(true);
+      } else {
+        setIsSyncing(true);
+      }
       const [
         fetchedCourses,
         fetchedCategories,
@@ -56,7 +70,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         fetchedSelections,
         fetchedEnrollments,
         fetchedStudents,
-        fetchedInstructors
+        fetchedInstructors,
+        fetchedTeachers,
+        fetchedInvitations,
+        fetchedAssignments
       ] = await Promise.all([
         dataService.getCourses(),
         dataService.getCategories(),
@@ -64,7 +81,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         dataService.getCourseSelections(),
         dataService.getEnrollments(),
         dataService.getStudents(),
-        dataService.getInstructors()
+        dataService.getInstructors(),
+        dataService.getTeachers(),
+        dataService.getTeacherInvitations(),
+        dataService.getTeacherAssignments()
       ]);
 
       setCourses(fetchedCourses);
@@ -74,15 +94,31 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       setEnrollments(fetchedEnrollments);
       setStudents(fetchedStudents);
       setInstructors(fetchedInstructors);
+      setTeachers(fetchedTeachers);
+      setInvitations(fetchedInvitations);
+      setTeacherAssignments(fetchedAssignments);
+      setLastSyncedAt(new Date());
     } catch (err) {
       console.error('Failed to load authoritative admin data:', err);
     } finally {
       setLoading(false);
+      setIsSyncing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    // Initial fetch
+    loadData(false);
+
+    // Smart Real-time Auto-refresh subscription
+    const unsubscribe = realtimeSync.subscribe((event) => {
+      // Refresh cleanly in background without unmounting or blocking the UI
+      loadData(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [loadData]);
 
   const pendingRequestsCount = selections.filter(s => s.status === 'pending').length;
@@ -160,7 +196,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       }
     }
 
-    await loadData();
+    await loadData(true);
     setIsCreatingCourse(false);
     setEditingCourse(null);
   };
@@ -171,12 +207,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       status: nextStatus,
       is_published: nextStatus === 'published'
     });
-    await loadData();
+    await loadData(true);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
     await dataService.deleteCourse(courseId);
-    await loadData();
+    await loadData(true);
   };
 
   // Schedule Handlers
@@ -192,26 +228,26 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       ...scheduleData,
       is_active: true
     });
-    await loadData();
+    await loadData(true);
   };
 
   const handleToggleSchedule = async (schedule: CourseSchedule) => {
     await dataService.updateCourseSchedule(schedule.id, {
       is_active: !schedule.is_active
     });
-    await loadData();
+    await loadData(true);
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
     await dataService.deleteCourseSchedule(scheduleId);
-    await loadData();
+    await loadData(true);
   };
 
   // Selection Handlers
   const handleApproveSelection = async (selectionId: string) => {
     try {
       await dataService.approveCourseSelection(selectionId, currentUser?.id);
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       console.error('Failed to approve course selection:', err);
       throw err;
@@ -221,7 +257,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   const handleRejectSelection = async (selectionId: string) => {
     try {
       await dataService.rejectCourseSelection(selectionId, currentUser?.id);
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       console.error('Failed to reject course selection:', err);
       throw err;
@@ -231,8 +267,35 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   // Category Handlers
   const handleCreateCategory = async (name: string, file?: File | null): Promise<any> => {
     const created = await dataService.createCategory(name, file);
-    await loadData();
+    await loadData(true);
     return created;
+  };
+
+  // Teacher Management Handlers
+  const handleCreateTeacherInvitation = async (email: string): Promise<TeacherInvitation> => {
+    const inv = await dataService.createTeacherInvitation(email, currentUser.id);
+    await loadData(true);
+    return inv;
+  };
+
+  const handleResendTeacherInvitation = async (id: string) => {
+    await dataService.resendTeacherInvitation(id);
+    await loadData(true);
+  };
+
+  const handleRevokeTeacherInvitation = async (id: string) => {
+    await dataService.revokeTeacherInvitation(id);
+    await loadData(true);
+  };
+
+  const handleAssignTeacher = async (teacherId: string, courseId: string, scheduleId?: string) => {
+    await dataService.assignTeacher(teacherId, courseId, scheduleId, currentUser.id);
+    await loadData(true);
+  };
+
+  const handleRemoveTeacherAssignment = async (assignmentId: string) => {
+    await dataService.removeTeacherAssignment(assignmentId);
+    await loadData(true);
   };
 
   // Header Titles and Actions
@@ -249,7 +312,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       case 'times': return 'Class Times';
       case 'requests': return 'Course Requests';
       case 'students': return 'Students';
-      case 'instructors': return 'Instructors';
+      case 'instructors': return 'Teachers';
       case 'enrollments': return 'Enrollments';
       case 'reports': return 'Reports';
       case 'settings': return 'Settings';
@@ -305,11 +368,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         onOpenMenu={() => setIsSidebarOpen(true)}
         rightAction={renderHeaderRightAction()}
         unreadCount={pendingRequestsCount}
+        isSyncing={isSyncing}
+        onRefresh={() => loadData(true)}
+        lastSyncedAt={lastSyncedAt}
       />
 
       {/* Main View Container */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-4 md:py-6">
-        {loading && (
+        {loading && courses.length === 0 && students.length === 0 && (
           <div className="flex items-center justify-center py-12 gap-2 text-xs font-semibold text-gray-500">
             <RefreshCw className="w-4 h-4 animate-spin text-[#0A9D8F]" />
             <span>Syncing authoritative Supabase records...</span>
@@ -328,7 +394,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
             onSubmit={handleSaveCourse}
             onCreateCategoryInline={async (name) => {
               const res = await dataService.createCategory(name);
-              await loadData();
+              await loadData(true);
               return res;
             }}
           />
@@ -361,6 +427,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                   setSelectedRequest(req);
                   setActiveTab('requests');
                 }}
+                isSyncing={isSyncing}
+                onRefresh={() => loadData(true)}
+                lastSyncedAt={lastSyncedAt}
               />
             )}
 
@@ -446,15 +515,20 @@ export const AdminApp: React.FC<AdminAppProps> = ({
             )}
 
             {activeTab === 'instructors' && (
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs text-center space-y-3 pb-20">
-                <div className="w-12 h-12 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center mx-auto">
-                  <GraduationCap className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-gray-950">Instructors Management</h3>
-                <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                  {instructors.length} instructors registered. Assigned instructors lead interactive class cohorts.
-                </p>
-              </div>
+              <AdminTeachers
+                teachers={teachers}
+                invitations={invitations}
+                assignments={teacherAssignments}
+                courses={courses}
+                schedules={schedules}
+                currentUser={currentUser}
+                onCreateInvitation={handleCreateTeacherInvitation}
+                onResendInvitation={handleResendTeacherInvitation}
+                onRevokeInvitation={handleRevokeTeacherInvitation}
+                onAssignTeacher={handleAssignTeacher}
+                onRemoveAssignment={handleRemoveTeacherAssignment}
+                onRefresh={() => loadData(true)}
+              />
             )}
 
             {activeTab === 'enrollments' && (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
+import { realtimeSync } from '../services/realtimeSync';
 import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification, CourseCategory } from '../types';
 import { 
   Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
@@ -47,6 +48,79 @@ const getCourseDescription = (course: Course) => {
     return 'Build modern web solutions. Learn frontend and backend development with hands-on labs and direct mentor feedback.';
   }
   return 'Participate in professional instructor-led sessions, live weekly labs, and build a high-caliber portfolio to accelerate your career.';
+};
+
+const StudentClassMeetingLink: React.FC<{ scheduleId?: string }> = ({ scheduleId }) => {
+  const [meetingData, setMeetingData] = useState<{ accessible: boolean; meeting_url?: string; message?: string } | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMeetingUrl = async () => {
+      try {
+        const res = await dataService.teachers.getStudentMeetingUrl(scheduleId);
+        if (isMounted) setMeetingData(res);
+      } catch (e) {
+        if (isMounted) setMeetingData({ accessible: false, message: 'Class session details unavailable.' });
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchMeetingUrl();
+    const timer = setInterval(fetchMeetingUrl, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [scheduleId]);
+
+  if (loading) {
+    return (
+      <div className="p-3 bg-zinc-50 rounded-xl text-[11px] text-zinc-400">
+        Checking live class schedule...
+      </div>
+    );
+  }
+
+  if (meetingData?.accessible && meetingData.meeting_url) {
+    return (
+      <div className="p-3 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-xl space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#0A9D8F]">
+            <Video className="w-3.5 h-3.5" />
+            <span>Live Class Room Active</span>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0A9D8F] text-white">
+            Ready to Join
+          </span>
+        </div>
+        <p className="text-[11px] text-zinc-600 leading-relaxed">
+          Your class session is currently active. Click below to enter your Google Meet classroom.
+        </p>
+        <a
+          href={meetingData.meeting_url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs"
+        >
+          <Video className="w-3.5 h-3.5" />
+          <span>Join Google Meet Class</span>
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 bg-zinc-50 rounded-xl space-y-1">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800">
+        <Clock className="w-3.5 h-3.5 text-zinc-400" />
+        <span>Live Class Session</span>
+      </div>
+      <p className="text-[11px] text-zinc-500 leading-relaxed">
+        {meetingData?.message || 'Google Meet links unlock automatically 15 minutes before your scheduled class.'}
+      </p>
+    </div>
+  );
 };
 
 interface StudentAppProps {
@@ -135,8 +209,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   };
 
   // Load all student specific data
-  const loadStudentData = async () => {
-    setLoading(true);
+  const loadStudentData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const fetchedCats = await dataService.categories.getCategories();
       setCategories(fetchedCats.filter(c => c.is_active));
@@ -163,12 +237,23 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     } catch (e) {
       console.error("Error loading student data", e);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadStudentData();
+    // Initial fetch
+    loadStudentData(false);
+
+    // Smart auto-refresh subscription (Supabase Realtime, tab visibility, cross-tab broadcasts)
+    const unsubscribe = realtimeSync.subscribe((event) => {
+      // If course selections, enrollments, courses, or schedules changed, refresh student data in background
+      loadStudentData(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [currentUser.id]);
 
   const getCoursePriceAndCurrency = (course: Course) => {
@@ -911,6 +996,9 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                             <span className="font-normal text-zinc-500">Syllabus Complete</span>
                             <span className="font-semibold text-[#0A9D8F]">0%</span>
                           </div>
+
+                          {/* Live Meeting Link (Enforcing 15-minute window) */}
+                          <StudentClassMeetingLink scheduleId={enr.schedule_id} />
 
                           <div className="p-3 bg-zinc-50 rounded-xl space-y-1">
                             <p className="font-medium text-zinc-900">Class curriculum and video logs</p>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, BookOpen, Inbox, ShieldCheck, ChevronDown, 
-  ArrowUpRight, Plus, ExternalLink, Clock
+  ArrowUpRight, Plus, ExternalLink, Clock, RefreshCw
 } from 'lucide-react';
 import { Profile, Course, CourseSelection, Enrollment } from '../../types';
+import { formatTimeAgo } from '../../services/realtimeSync';
 
 interface AdminDashboardProps {
   students: Profile[];
@@ -13,6 +14,9 @@ interface AdminDashboardProps {
   onNavigate: (tab: any) => void;
   onOpenRequest: (selection: CourseSelection) => void;
   currentUser: Profile;
+  isSyncing?: boolean;
+  onRefresh?: () => void;
+  lastSyncedAt?: Date | null;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -22,13 +26,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   enrollments,
   onNavigate,
   onOpenRequest,
-  currentUser
+  currentUser,
+  isSyncing = false,
+  onRefresh,
+  lastSyncedAt
 }) => {
   const [timeRange, setTimeRange] = useState('Last 30 days');
+  const [, setTick] = useState(0);
+
+  // Update relative time readout every 5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const pendingRequests = selections.filter(s => s.status === 'pending');
   const activeEnrollments = enrollments.filter(e => e.status === 'active');
   const recentRequests = selections.slice(0, 4);
+  const timeAgoText = formatTimeAgo(lastSyncedAt);
 
   // SVG Chart calculation based on actual enrollments over the past 30 days
   // Grid values: 240, 180, 120, 60, 0
@@ -67,14 +82,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="space-y-5 pb-20">
-      {/* Welcome Banner */}
-      <div>
-        <h2 className="text-xl md:text-2xl font-black text-gray-950 tracking-tight">
-          Welcome back, {currentUser.full_name?.split(' ')[0] || 'Admin'}!
-        </h2>
-        <p className="text-xs text-gray-500 font-medium mt-0.5">
-          Here's what's happening today.
-        </p>
+      {/* Welcome Banner & Live Auto-Refresh Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs">
+        <div>
+          <h2 className="text-xl md:text-2xl font-black text-gray-950 tracking-tight">
+            Welcome back, {currentUser.full_name?.split(' ')[0] || 'Admin'}!
+          </h2>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">
+            Here's what's happening today in real-time.
+          </p>
+        </div>
+
+        {/* Live sync pill & quick refresh */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div 
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              isSyncing 
+                ? 'bg-teal-50 border-teal-200 text-[#0A9D8F]' 
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-[#0A9D8F] animate-ping' : 'bg-emerald-500 animate-pulse'}`} />
+            <span>{isSyncing ? 'Refreshing...' : 'Live Sync'}</span>
+            <span className="text-[11px] text-gray-500 font-normal pl-1.5 border-l border-emerald-200/80">
+              {timeAgoText}
+            </span>
+          </div>
+
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isSyncing}
+              title="Click to sync latest records immediately"
+              className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:text-[#0A9D8F] hover:border-[#0A9D8F]/50 active:scale-95 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#0A9D8F]' : ''}`} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 2x2 Metric Cards Grid */}

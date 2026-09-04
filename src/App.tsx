@@ -3,15 +3,42 @@ import { Onboarding } from './components/Onboarding';
 import { Auth } from './components/Auth';
 import { StudentApp } from './components/StudentApp';
 import { AdminApp } from './components/AdminApp';
+import { TeacherApp } from './components/TeacherApp';
+import { TeacherInviteAccept } from './components/teacher/TeacherInviteAccept';
 import { dataService } from './services/dataService';
 import { Profile, UserRole } from './types';
 import { Loader2 } from 'lucide-react';
+
+const getInviteTokenFromUrl = (): string | null => {
+  try {
+    const url = new URL(window.location.href);
+    const paramToken = url.searchParams.get('invite') || url.searchParams.get('token') || url.searchParams.get('teacher_invite');
+    if (paramToken) return paramToken;
+
+    const path = url.pathname;
+    const match = path.match(/\/teacher\/invite\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) return match[1];
+
+    const hash = url.hash;
+    const hashMatch = hash.match(/teacher\/invite\/([a-zA-Z0-9_-]+)/);
+    if (hashMatch && hashMatch[1]) return hashMatch[1];
+    if (hash.includes('invite=')) {
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+      const hToken = hashParams.get('invite') || hashParams.get('token');
+      if (hToken) return hToken;
+    }
+  } catch (e) {
+    console.error('Error parsing invite token:', e);
+  }
+  return null;
+};
 
 export default function App() {
   const [onboarded, setOnboarded] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
   const [loading, setLoading] = useState<boolean>(true);
+  const [inviteToken, setInviteToken] = useState<string | null>(() => getInviteTokenFromUrl());
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('ingenium_theme') as 'light' | 'dark') || 'light';
   });
@@ -117,26 +144,63 @@ export default function App() {
     );
   }
 
-  // 1. Authenticated users go straight to their dashboard (never blocked by onboarding)
-  if (currentUser) {
+  // 0. Teacher Invitation Acceptance Link Screen (if token present in URL)
+  if (inviteToken && !currentUser) {
     return (
-      <div className={`min-h-screen ${currentRole === 'admin' ? 'bg-[#F8FAFC] text-[#111827]' : (theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white')} selection:bg-[#0A9D8F]/20 font-sans`}>
-        {currentRole === 'admin' ? (
+      <TeacherInviteAccept
+        token={inviteToken}
+        onSuccess={(profile) => {
+          setInviteToken(null);
+          try {
+            window.history.replaceState({}, '', '/');
+          } catch (e) {}
+          handleAuthSuccess(profile);
+        }}
+        onGoToSignIn={() => {
+          setInviteToken(null);
+          try {
+            window.history.replaceState({}, '', '/');
+          } catch (e) {}
+        }}
+      />
+    );
+  }
+
+  // 1. Authenticated users go straight to their role-specific dashboard
+  if (currentUser) {
+    if (currentRole === 'admin') {
+      return (
+        <div className="min-h-screen bg-[#F8FAFC] text-[#111827] selection:bg-[#0A9D8F]/20 font-sans">
           <AdminApp 
             currentUser={currentUser} 
             onLogout={handleLogout} 
             theme={theme}
             onToggleTheme={toggleTheme}
           />
-        ) : (
-          <StudentApp 
+        </div>
+      );
+    }
+
+    if (currentRole === 'teacher') {
+      return (
+        <div className="min-h-screen bg-[#F8FAFC] text-[#111827] selection:bg-[#0A9D8F]/20 font-sans">
+          <TeacherApp 
             currentUser={currentUser} 
             onLogout={handleLogout}
-            onProfileUpdate={handleProfileUpdate}
-            theme={theme}
-            onToggleTheme={toggleTheme}
           />
-        )}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`min-h-screen ${theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white'} selection:bg-[#0A9D8F]/20 font-sans`}>
+        <StudentApp 
+          currentUser={currentUser} 
+          onLogout={handleLogout}
+          onProfileUpdate={handleProfileUpdate}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
       </div>
     );
   }
