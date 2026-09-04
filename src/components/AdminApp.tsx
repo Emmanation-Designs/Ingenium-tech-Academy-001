@@ -278,9 +278,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({
     return inv;
   };
 
-  const handleResendTeacherInvitation = async (id: string) => {
-    await dataService.resendTeacherInvitation(id);
+  const handleResendTeacherInvitation = async (id: string): Promise<TeacherInvitation> => {
+    const inv = await dataService.resendTeacherInvitation(id);
     await loadData(true);
+    return inv;
   };
 
   const handleRevokeTeacherInvitation = async (id: string) => {

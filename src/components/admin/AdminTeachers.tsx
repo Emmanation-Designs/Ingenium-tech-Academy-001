@@ -13,7 +13,7 @@ interface AdminTeachersProps {
   schedules: CourseSchedule[];
   currentUser: Profile;
   onCreateInvitation: (email: string) => Promise<TeacherInvitation>;
-  onResendInvitation: (id: string) => Promise<void>;
+  onResendInvitation: (id: string) => Promise<TeacherInvitation | void>;
   onRevokeInvitation: (id: string) => Promise<void>;
   onAssignTeacher: (teacherId: string, courseId: string, scheduleId?: string) => Promise<void>;
   onRemoveAssignment: (assignmentId: string) => Promise<void>;
@@ -50,7 +50,8 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
 
   const getInviteUrl = (token: string): string => {
-    return `${window.location.origin}/teacher/invite/${token}`;
+    // Generate clean query-param URL so it resolves on any static server, reverse proxy, or dev iframe without 404 errors
+    return `${window.location.origin}/?invite=${encodeURIComponent(token)}`;
   };
 
   const handleCopyLink = async (token: string) => {
@@ -424,10 +425,20 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                         </>
                       )}
 
-                      {(isRevoked || isExpired) && (
+                      {(isRevoked || isExpired || inv.status === 'pending') && (
                         <button
                           type="button"
-                          onClick={() => onResendInvitation(inv.id)}
+                          onClick={async () => {
+                            try {
+                              const res = await onResendInvitation(inv.id);
+                              if (res) {
+                                setGeneratedInvite(res);
+                                setIsInviteModalOpen(true);
+                              }
+                            } catch (err: any) {
+                              console.error('Failed to resend invitation', err);
+                            }
+                          }}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-all cursor-pointer"
                         >
                           <RefreshCw className="w-3 h-3" />

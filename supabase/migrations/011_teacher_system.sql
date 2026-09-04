@@ -61,6 +61,13 @@ BEGIN
     ) THEN
         ALTER TABLE public.teacher_invitations ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
     END IF;
+
+    -- Drop legacy UNIQUE constraint on email or invited_email to allow re-invites and multiple invites per address
+    ALTER TABLE public.teacher_invitations DROP CONSTRAINT IF EXISTS teacher_invitations_email_key;
+    ALTER TABLE public.teacher_invitations DROP CONSTRAINT IF EXISTS teacher_invitations_invited_email_key;
+    DROP INDEX IF EXISTS public.teacher_invitations_email_key;
+    DROP INDEX IF EXISTS public.teacher_invitations_invited_email_key;
+    DROP INDEX IF EXISTS public.idx_teacher_invitations_email_unique;
 END $$;
 
 -- Create indexes for fast lookup
@@ -125,6 +132,17 @@ DROP POLICY IF EXISTS "Admins can view and manage teacher invitations" ON public
 CREATE POLICY "Admins can view and manage teacher invitations"
     ON public.teacher_invitations FOR ALL
     USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Anyone can view teacher invitations by token" ON public.teacher_invitations;
+CREATE POLICY "Anyone can view teacher invitations by token"
+    ON public.teacher_invitations FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Users can update teacher invitations when claiming" ON public.teacher_invitations;
+CREATE POLICY "Users can update teacher invitations when claiming"
+    ON public.teacher_invitations FOR UPDATE
+    USING (status = 'pending')
+    WITH CHECK (status = 'accepted');
 
 -- 7. RLS Policies for teacher_course_assignments
 DROP POLICY IF EXISTS "Admins can manage all teacher assignments" ON public.teacher_course_assignments;

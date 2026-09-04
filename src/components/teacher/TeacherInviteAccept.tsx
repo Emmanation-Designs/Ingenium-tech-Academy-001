@@ -8,14 +8,18 @@ import { Profile } from '../../types';
 
 interface TeacherInviteAcceptProps {
   token: string;
+  currentUser?: Profile | null;
   onSuccess: (profile: Profile) => void;
   onGoToSignIn: () => void;
+  onContinueToDashboard?: () => void;
 }
 
 export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
   token,
+  currentUser,
   onSuccess,
-  onGoToSignIn
+  onGoToSignIn,
+  onContinueToDashboard
 }) => {
   const [isValidating, setIsValidating] = useState<boolean>(true);
   const [invitationData, setInvitationData] = useState<{
@@ -175,10 +179,10 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
 
           <button
             type="button"
-            onClick={onGoToSignIn}
+            onClick={currentUser && onContinueToDashboard ? onContinueToDashboard : onGoToSignIn}
             className="w-full py-2.5 rounded-xl bg-zinc-950 text-white text-xs font-bold hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
           >
-            Return to Sign In
+            {currentUser && onContinueToDashboard ? 'Return to Dashboard' : 'Return to Sign In'}
           </button>
         </div>
       </div>
@@ -236,7 +240,82 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
             </p>
           </div>
 
-          {mode === 'register' ? (
+          {/* Current User Session Handling */}
+          {currentUser && (
+            currentUser.email?.toLowerCase().trim() === invitationData.invited_email?.toLowerCase().trim() ? (
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Signed in as {currentUser.email}</span>
+                </div>
+                <p className="text-xs text-emerald-700">
+                  You are already logged into this account. Click below to activate your teacher privileges and open your instructor workspace.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsSubmitting(true);
+                    setErrorMsg(null);
+                    try {
+                      const res = await dataService.teacherInvitations.claimInvitation(token, currentUser.id);
+                      if (!res.success) {
+                        setErrorMsg(res.message || 'Failed to activate teacher account.');
+                        setIsSubmitting(false);
+                        return;
+                      }
+                      const updated = await dataService.auth.getCurrentUser();
+                      if (updated) {
+                        onSuccess(updated);
+                      } else {
+                        onSuccess({ ...currentUser, role: 'teacher' });
+                      }
+                    } catch (e: any) {
+                      setErrorMsg(e.message || 'Failed to activate teacher account.');
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#0A9D8F]/90 transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
+                  <span>Accept & Activate Teacher Role</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  <span>Currently Signed In: {currentUser.email}</span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  This invitation is strictly bound to <strong>{invitationData.invited_email}</strong>. To accept it, please sign out of your current account.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await dataService.auth.signOut();
+                      window.location.reload();
+                    }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors cursor-pointer text-center"
+                  >
+                    Sign Out to Accept
+                  </button>
+                  {onContinueToDashboard && (
+                    <button
+                      type="button"
+                      onClick={onContinueToDashboard}
+                      className="py-2 px-3 rounded-xl border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer text-center"
+                    >
+                      Return to Dashboard
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          )}
+
+          {!currentUser && (mode === 'register' ? (
             <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-gray-800 mb-1">
@@ -403,7 +482,7 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
                 </button>
               </div>
             </form>
-          )}
+          ))}
 
           <div className="pt-3 border-t border-gray-100 text-center">
             <button

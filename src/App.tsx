@@ -54,6 +54,22 @@ export default function App() {
     }
   }, [theme]);
 
+  // Listen for browser URL changes (back/forward or navigation with invite params)
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const token = getInviteTokenFromUrl();
+      if (token !== inviteToken) {
+        setInviteToken(token);
+      }
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, [inviteToken]);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
@@ -145,10 +161,11 @@ export default function App() {
   }
 
   // 0. Teacher Invitation Acceptance Link Screen (if token present in URL)
-  if (inviteToken && !currentUser) {
+  if (inviteToken) {
     return (
       <TeacherInviteAccept
         token={inviteToken}
+        currentUser={currentUser}
         onSuccess={(profile) => {
           setInviteToken(null);
           try {
@@ -157,6 +174,12 @@ export default function App() {
           handleAuthSuccess(profile);
         }}
         onGoToSignIn={() => {
+          setInviteToken(null);
+          try {
+            window.history.replaceState({}, '', '/');
+          } catch (e) {}
+        }}
+        onContinueToDashboard={() => {
           setInviteToken(null);
           try {
             window.history.replaceState({}, '', '/');

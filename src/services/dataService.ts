@@ -1145,22 +1145,63 @@ export const dataService = {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const now = new Date().toISOString();
 
-      const newInv = {
-        invited_email: normalizedEmail,
-        email: normalizedEmail,
-        token,
-        invited_by: adminId || null,
-        status: 'pending',
-        expires_at: expiresAt,
-        created_at: now,
-        updated_at: now
-      };
-
-      const { data, error } = await supabase
+      // Check if an invitation already exists for this email address
+      const { data: existingInvs } = await supabase
         .from('teacher_invitations')
-        .insert([newInv])
-        .select()
-        .single();
+        .select('*')
+        .or(`invited_email.eq.${normalizedEmail},email.eq.${normalizedEmail}`)
+        .order('created_at', { ascending: false });
+
+      let data: any = null;
+      let error: any = null;
+
+      // If an existing invitation already exists (e.g. pending, revoked, expired),
+      // update and refresh it to prevent duplicate key constraint violations and give a fresh valid link
+      if (existingInvs && existingInvs.length > 0) {
+        const existingInv = existingInvs[0];
+        const updateRes = await supabase
+          .from('teacher_invitations')
+          .update({
+            invited_email: normalizedEmail,
+            email: normalizedEmail,
+            token,
+            invited_by: adminId || existingInv.invited_by || null,
+            status: 'pending',
+            expires_at: expiresAt,
+            accepted_at: null,
+            accepted_user_id: null,
+            updated_at: now
+          })
+          .eq('id', existingInv.id)
+          .select()
+          .single();
+
+        data = updateRes.data;
+        error = updateRes.error;
+      }
+
+      // If no existing record or update failed, insert a new invitation record
+      if (!data) {
+        const newInv = {
+          invited_email: normalizedEmail,
+          email: normalizedEmail,
+          token,
+          invited_by: adminId || null,
+          status: 'pending',
+          expires_at: expiresAt,
+          created_at: now,
+          updated_at: now
+        };
+
+        const insertRes = await supabase
+          .from('teacher_invitations')
+          .insert([newInv])
+          .select()
+          .single();
+
+        data = insertRes.data;
+        error = insertRes.error;
+      }
 
       if (error) {
         console.error('[Supabase] Error creating teacher invitation:', error.message);
