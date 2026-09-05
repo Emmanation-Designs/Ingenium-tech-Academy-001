@@ -215,7 +215,7 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
               {mode === 'register' ? 'Set Up Instructor Account' : 'Claim Invitation with Existing Account'}
             </h2>
             <p className="text-xs text-gray-500">
-              Complete your profile to access your classes, cohort schedules, and live Google Meet sessions.
+              Complete your profile to access your classes, schedules, and live Google Meet sessions.
             </p>
           </div>
 

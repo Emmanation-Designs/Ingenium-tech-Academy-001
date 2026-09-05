@@ -90,7 +90,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
   // Aggregate stats
   const totalCourses = new Set(classes.map(c => c.course.id)).size;
-  const totalCohorts = classes.filter(c => c.schedule).length;
+  const totalSchedules = classes.filter(c => c.schedule).length;
   
   // Unique active students
   const uniqueStudentsMap = new Map<string, { id: string; name: string; email: string; courseTitle: string; enrolledAt: string }>();
@@ -327,8 +327,8 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
                   <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Class Cohorts</p>
-                      <h3 className="text-2xl font-extrabold text-gray-950 mt-1">{totalCohorts}</h3>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Class Schedules</p>
+                      <h3 className="text-2xl font-extrabold text-gray-950 mt-1">{totalSchedules}</h3>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-900 flex items-center justify-center">
                       <Calendar className="w-5 h-5 stroke-[2]" />
@@ -346,11 +346,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                   </div>
                 </div>
 
-                {/* Live Class Links & Upcoming Cohorts */}
+                {/* Live Class Links & Upcoming Schedules */}
                 <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-950">Active Class Cohorts & Google Meet Links</h3>
+                      <h3 className="text-sm font-bold text-gray-950">Active Class Schedules & Google Meet Links</h3>
                       <p className="text-xs text-gray-500">
                         Provide students with your Google Meet link. Links become visible to enrolled students 15 minutes prior to class.
                       </p>
@@ -426,7 +426,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               ) : (
                                 <div className="p-2 rounded-xl bg-white border border-dashed border-gray-300 text-gray-400 text-[11px] flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5" />
-                                  <span>No Google Meet link set for this cohort</span>
+                                  <span>No Google Meet link set for this schedule</span>
                                 </div>
                               )}
                             </div>
@@ -457,11 +457,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-gray-950">Assigned Courses & Schedules</h3>
                     <p className="text-xs text-gray-500">
-                      Manage session links and review student rosters for each assigned cohort.
+                      Manage session links and review student rosters for each assigned schedule.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-[#0A9D8F] bg-[#E6F5F4] px-3 py-1 rounded-full self-start sm:self-auto">
-                    {classes.length} Total Cohorts
+                    {classes.length} Total Schedules
                   </span>
                 </div>
 
@@ -470,7 +470,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                     <BookOpen className="w-8 h-8 text-gray-400 mx-auto" />
                     <h4 className="text-sm font-bold text-gray-950">No Assigned Classes</h4>
                     <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      You are currently not assigned to any courses. Once the administrator assigns a cohort to you, it will appear here.
+                      You are currently not assigned to any courses. Once the administrator assigns a schedule to you, it will appear here.
                     </p>
                   </div>
                 ) : (
@@ -560,7 +560,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
                           {item.students.length === 0 ? (
                             <p className="text-xs text-gray-400 italic bg-gray-50 p-3 rounded-xl">
-                              No students currently enrolled in this specific cohort.
+                              No students currently enrolled in this specific schedule.
                             </p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -587,7 +587,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-gray-950">Enrolled Students Roster</h3>
                     <p className="text-xs text-gray-500">
-                      Students registered across all of your assigned courses and cohorts.
+                      Students registered across all of your assigned courses and schedules.
                     </p>
                   </div>
                   <div className="relative max-w-xs w-full">

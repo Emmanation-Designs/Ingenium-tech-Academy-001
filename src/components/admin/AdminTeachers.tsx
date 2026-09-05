@@ -133,7 +133,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Invite verified instructors, manage invitations, and assign courses & live cohorts.
+            Invite verified instructors, manage invitations, and assign courses & class schedules.
           </p>
         </div>
 
@@ -257,7 +257,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                       {/* Assigned Courses snippet */}
                       <div className="pt-2 border-t border-gray-100 space-y-1.5">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-gray-700">Assigned Cohorts:</span>
+                          <span className="font-semibold text-gray-700">Assigned Schedules:</span>
                           <span className="font-bold text-[#0A9D8F]">{teacherAssignments.length}</span>
                         </div>
                         {teacherAssignments.length === 0 ? (
@@ -622,7 +622,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                             <h5 className="text-xs font-bold text-gray-950">{a.course_title || 'Course'}</h5>
                             <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
                               <Clock className="w-3 h-3 text-gray-400" />
-                              <span>{a.schedule_label || 'All cohorts'}</span>
+                              <span>{a.schedule_label || 'All schedules'}</span>
                             </p>
                           </div>
                           <button
@@ -674,14 +674,14 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                 {selectedCourseId && (
                   <div>
                     <label className="block text-xs font-bold text-gray-800 mb-1">
-                      Select Cohort / Schedule (Optional)
+                      Select Class Schedule (Optional)
                     </label>
                     <select
                       value={selectedScheduleId}
                       onChange={e => setSelectedScheduleId(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
                     >
-                      <option value="">All Cohorts for this Course</option>
+                      <option value="">All Schedules for this Course</option>
                       {availableSchedules.map(s => (
                         <option key={s.id} value={s.id}>
                           {s.label} ({s.day_of_week} {s.start_time} - {s.end_time})
@@ -689,7 +689,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                       ))}
                     </select>
                     <p className="text-[10px] text-gray-400 mt-1">
-                      Assigning to a specific schedule makes this teacher the primary tutor for that cohort.
+                      Assigning to a specific schedule makes this teacher the primary tutor for that class.
                     </p>
                   </div>
                 )}

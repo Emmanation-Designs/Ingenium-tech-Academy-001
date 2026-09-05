@@ -467,7 +467,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
               <div className="space-y-4 pb-20">
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
                   <h3 className="text-sm font-bold text-gray-950 mb-1">Select a course to manage class times:</h3>
-                  <p className="text-xs text-gray-500 mb-3">Each course has its own tailored live cohort times.</p>
+                  <p className="text-xs text-gray-500 mb-3">Each course has its own tailored live class schedule times.</p>
                   <div className="divide-y divide-gray-100">
                     {courses.map(c => {
                       const count = schedules.filter(s => s.course_id === c.id).length;

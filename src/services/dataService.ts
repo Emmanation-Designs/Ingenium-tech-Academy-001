@@ -1338,35 +1338,11 @@ export const dataService = {
           return rpcData;
         }
 
-        const { data: inv, error: invError } = await supabase
-          .from('teacher_invitations')
-          .select('*')
-          .eq('token', token)
-          .maybeSingle();
-
-        if (invError || !inv) {
-          return { success: false, message: 'Invitation not found.' };
+        if (rpcError) {
+          return { success: false, message: rpcError.message || 'Failed to claim invitation.' };
         }
 
-        await supabase
-          .from('profiles')
-          .update({ role: 'teacher', updated_at: new Date().toISOString() })
-          .eq('id', userId);
-
-        await supabase
-          .from('teacher_invitations')
-          .update({
-            status: 'accepted',
-            accepted_at: new Date().toISOString(),
-            accepted_user_id: userId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', inv.id);
-
-        realtimeSync.notifyMutation('profiles', 'UPDATE');
-        realtimeSync.notifyMutation('teacher_invitations', 'UPDATE');
-
-        return { success: true, message: 'Teacher account activated successfully.' };
+        return { success: false, message: 'Failed to claim invitation.' };
       } catch (e: any) {
         return { success: false, message: e.message };
       }
@@ -1622,17 +1598,11 @@ export const dataService = {
           return data;
         }
 
-        if (scheduleId) {
-          const { data: sched } = await supabase
-            .from('course_schedules')
-            .select('meeting_url')
-            .eq('id', scheduleId)
-            .maybeSingle();
-
-          if (sched?.meeting_url) {
-            return { accessible: true, meeting_url: sched.meeting_url };
-          }
+        if (error) {
+          console.warn('[getStudentMeetingUrl] RPC error:', error.message);
+          return { accessible: false, message: error.message || 'Unable to retrieve meeting access.' };
         }
+
         return { accessible: false, message: 'No meeting link is currently active.' };
       } catch (e: any) {
         return { accessible: false, message: e.message };
