@@ -16,7 +16,8 @@ class RealtimeSyncService {
   private debounceTimer: any = null;
   private broadcastChannel: BroadcastChannel | null = null;
   private lastSyncTime: number = Date.now();
-  private isInitialized: boolean = false;
+  private connectionState: 'idle' | 'connecting' | 'connected' | 'error' = 'idle';
+  private reconnectTimer: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -110,10 +111,32 @@ class RealtimeSyncService {
    * Subscribe to Supabase Realtime changes across all key application tables
    */
   public initSupabaseRealtime() {
-    if (this.isInitialized || !isSupabaseConfigured || !supabase) return;
+    // Prevent re-entry if already connecting, connected, or if channel is already active
+    if (
+      this.connectionState === 'connecting' ||
+      this.connectionState === 'connected' ||
+      this.supabaseChannel !== null ||
+      !isSupabaseConfigured ||
+      !supabase
+    ) {
+      return;
+    }
+
+    // Set connecting flag synchronously to block race conditions from multiple subscriber mounts
+    this.connectionState = 'connecting';
 
     try {
+      // Remove any pre-existing channel with this topic in Supabase client to avoid duplicate callback collisions
+      const existingChannels = typeof supabase.getChannels === 'function' ? supabase.getChannels() : [];
+      const duplicateChannel = existingChannels.find(
+        (ch: any) => ch.topic === 'realtime:ingenium-db-sync' || ch.topic === 'ingenium-db-sync'
+      );
+      if (duplicateChannel) {
+        supabase.removeChannel(duplicateChannel);
+      }
+
       const channel = supabase.channel('ingenium-db-sync');
+      this.supabaseChannel = channel;
 
       const tables = [
         'course_selections',
@@ -123,7 +146,18 @@ class RealtimeSyncService {
         'course_pricing',
         'enrollments',
         'profiles',
-        'payments'
+        'payments',
+        'teacher_invitations',
+        'teacher_course_assignments',
+        'course_modules',
+        'course_lessons',
+        'lesson_materials',
+        'class_sessions',
+        'class_recordings',
+        'quizzes',
+        'quiz_attempts',
+        'student_lesson_progress',
+        'student_course_progress'
       ];
 
       tables.forEach(table => {
@@ -141,16 +175,68 @@ class RealtimeSyncService {
         );
       });
 
-      channel.subscribe((status: string) => {
+      channel.subscribe((status: string, err?: any) => {
         if (status === 'SUBSCRIBED') {
-          this.isInitialized = true;
+          this.connectionState = 'connected';
+          if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          this.connectionState = 'error';
+          console.warn('[RealtimeSync] Supabase realtime channel status:', status, err?.message || err);
+          this.scheduleReconnect();
+        } else if (status === 'CLOSED') {
+          if (this.connectionState === 'connected') {
+            this.connectionState = 'idle';
+            this.scheduleReconnect();
+          }
         }
       });
-
-      this.supabaseChannel = channel;
     } catch (err) {
+      this.connectionState = 'error';
       console.warn('[RealtimeSync] Could not establish Supabase realtime channel:', err);
+      this.scheduleReconnect();
     }
+  }
+
+  /**
+   * Schedule automatic reconnect when connection drops or errors
+   */
+  private scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    if (this.listeners.size === 0) return;
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (
+        this.listeners.size > 0 &&
+        this.connectionState !== 'connected' &&
+        this.connectionState !== 'connecting'
+      ) {
+        this.cleanupChannel();
+        this.initSupabaseRealtime();
+      }
+    }, 6000);
+  }
+
+  /**
+   * Cleanly leave and dispose of the Supabase realtime channel
+   */
+  public cleanupChannel() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.supabaseChannel && supabase) {
+      try {
+        supabase.removeChannel(this.supabaseChannel);
+      } catch (e) {
+        // ignore
+      }
+    }
+    this.supabaseChannel = null;
+    this.connectionState = 'idle';
   }
 
   /**

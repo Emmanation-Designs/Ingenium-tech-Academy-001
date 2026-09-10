@@ -7,6 +7,7 @@ import {
 import { Profile, Course, CourseSchedule } from '../types';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
+import { TeacherCourseWorkspace } from './teacher/TeacherCourseWorkspace';
 
 interface TeacherAppProps {
   currentUser: Profile;
@@ -28,6 +29,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<TeacherTab>('overview');
+  const [workspaceCourse, setWorkspaceCourse] = useState<{
+    course: Course;
+    scheduleLabel?: string;
+    scheduleId?: string;
+  } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -198,6 +204,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
       setIsUpdatingPassword(false);
     }
   };
+
+  if (workspaceCourse) {
+    return (
+      <TeacherCourseWorkspace
+        course={workspaceCourse.course}
+        currentUser={currentUser}
+        onBack={() => setWorkspaceCourse(null)}
+        scheduleLabel={workspaceCourse.scheduleLabel}
+        scheduleId={workspaceCourse.scheduleId}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-gray-900 font-sans flex flex-col selection:bg-[#0A9D8F]/20">
@@ -432,16 +450,32 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                             </div>
                           </div>
 
-                          {item.schedule?.id && (
+                          <div className="flex items-center gap-2 pt-1">
                             <button
                               type="button"
-                              onClick={() => handleOpenMeetModal(item)}
-                              className="w-full py-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                              onClick={() => setWorkspaceCourse({
+                                course: item.course,
+                                scheduleLabel: item.schedule?.label,
+                                scheduleId: item.schedule?.id
+                              })}
+                              className="flex-1 py-2 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                              <Video className="w-3.5 h-3.5" />
-                              <span>{item.meetingUrl ? 'Update Meet Link' : 'Add Google Meet Link'}</span>
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span>Course Workspace</span>
                             </button>
-                          )}
+
+                            {item.schedule?.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMeetModal(item)}
+                                className="py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                title="Set Google Meet Link"
+                              >
+                                <Video className="w-3.5 h-3.5" />
+                                <span>Meet Link</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -491,16 +525,31 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                             </p>
                           </div>
 
-                          {item.schedule?.id && (
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
                             <button
                               type="button"
-                              onClick={() => handleOpenMeetModal(item)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#0A9D8F]/90 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                              onClick={() => setWorkspaceCourse({
+                                course: item.course,
+                                scheduleLabel: item.schedule?.label,
+                                scheduleId: item.schedule?.id
+                              })}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs cursor-pointer"
                             >
-                              <Video className="w-3.5 h-3.5" />
-                              <span>{item.meetingUrl ? 'Edit Meet Link' : 'Set Meet Link'}</span>
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span>Course Workspace</span>
                             </button>
-                          )}
+
+                            {item.schedule?.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMeetModal(item)}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 text-zinc-800 text-xs font-bold hover:bg-zinc-200 transition-colors cursor-pointer"
+                              >
+                                <Video className="w-3.5 h-3.5" />
+                                <span>{item.meetingUrl ? 'Edit Meet' : 'Set Meet'}</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Schedule & Link details */}

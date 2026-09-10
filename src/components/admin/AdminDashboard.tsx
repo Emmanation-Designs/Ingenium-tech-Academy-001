@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Users, BookOpen, Inbox, ShieldCheck, ChevronDown, 
-  ArrowUpRight, Plus, ExternalLink, Clock, RefreshCw
+  ArrowUpRight, Plus, ExternalLink, Clock, RefreshCw,
+  TrendingUp, TrendingDown, Calendar, Check
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
+} from 'recharts';
 import { Profile, Course, CourseSelection, Enrollment } from '../../types';
 import { formatTimeAgo } from '../../services/realtimeSync';
 
@@ -19,6 +29,16 @@ interface AdminDashboardProps {
   lastSyncedAt?: Date | null;
 }
 
+type TimeRangeOption = '7d' | '30d' | '90d' | 'all';
+type ViewModeOption = 'cumulative' | 'daily';
+
+const TIME_RANGE_LABELS: Record<TimeRangeOption, string> = {
+  '7d': 'Last 7 days',
+  '30d': 'Last 30 days',
+  '90d': 'Last 90 days',
+  'all': 'All time'
+};
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   students,
   courses,
@@ -31,7 +51,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRefresh,
   lastSyncedAt
 }) => {
-  const [timeRange, setTimeRange] = useState('Last 30 days');
+  const [timeRange, setTimeRange] = useState<TimeRangeOption>('30d');
+  const [viewMode, setViewMode] = useState<ViewModeOption>('cumulative');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
 
   // Update relative time readout every 5 seconds
@@ -40,45 +63,127 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const pendingRequests = selections.filter(s => s.status === 'pending');
   const activeEnrollments = enrollments.filter(e => e.status === 'active');
   const recentRequests = selections.slice(0, 4);
   const timeAgoText = formatTimeAgo(lastSyncedAt);
 
-  // SVG Chart calculation based on actual enrollments over the past 30 days
-  // Grid values: 240, 180, 120, 60, 0
-  const maxChartValue = Math.max(240, Math.ceil((activeEnrollments.length || 1) / 50) * 50);
-  
-  // Create 4 data points for the 30 day line
-  const now = new Date();
-  const datePoints = [
-    new Date(now.getTime() - 27 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    new Date(now.getTime() - 18 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    new Date(now.getTime() - 9 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  ];
+  // ----------------------------------------------------------------------
+  // Real Data Aggregation and Date Bucketing
+  // ----------------------------------------------------------------------
+  const { chartData, periodTotal, prevPeriodChange, peakCount } = useMemo(() => {
+    const now = new Date();
+    // Normalize today to end of day
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  // Calculate points: if activeEnrollments exists, calculate curve, else baseline 0
-  const totalEnrolled = activeEnrollments.length;
-  const p1 = Math.round(totalEnrolled * 0.15);
-  const p2 = Math.round(totalEnrolled * 0.45);
-  const p3 = Math.round(totalEnrolled * 0.75);
-  const p4 = totalEnrolled;
+    let daysCount = 30;
+    if (timeRange === '7d') daysCount = 7;
+    else if (timeRange === '90d') daysCount = 90;
+    else if (timeRange === 'all') {
+      // Find earliest enrollment or 180 days ago
+      const earliestTs = activeEnrollments.reduce((min, e) => {
+        const ts = new Date(e.created_at || e.approved_at || Date.now()).getTime();
+        return ts < min ? ts : min;
+      }, Date.now());
+      const diffDays = Math.ceil((endOfToday.getTime() - earliestTs) / (1000 * 60 * 60 * 24));
+      daysCount = Math.max(30, Math.min(diffDays + 5, 365));
+    }
 
-  const getY = (val: number) => {
-    const height = 120;
-    const y = height - (val / maxChartValue) * height;
-    return Math.max(10, Math.min(height - 5, y));
-  };
+    const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (daysCount - 1), 0, 0, 0, 0);
+    const priorPeriodStartDate = new Date(startDate.getTime() - daysCount * 24 * 60 * 60 * 1000);
 
-  const chartPoints = [
-    { x: 30, y: getY(p1), val: p1 },
-    { x: 120, y: getY(p2), val: p2 },
-    { x: 210, y: getY(p3), val: p3 },
-    { x: 300, y: getY(p4), val: p4 }
-  ];
+    // Map each active enrollment to a timestamp
+    const enrollmentTimes = activeEnrollments.map(e => ({
+      ...e,
+      timestamp: new Date(e.created_at || e.approved_at || Date.now()).getTime()
+    }));
 
-  const svgPath = `M ${chartPoints[0].x} ${chartPoints[0].y} Q ${chartPoints[1].x - 30} ${chartPoints[1].y + 10}, ${chartPoints[1].x} ${chartPoints[1].y} T ${chartPoints[2].x} ${chartPoints[2].y} T ${chartPoints[3].x} ${chartPoints[3].y}`;
+    // Count in current period vs prior period
+    const inCurrentPeriod = enrollmentTimes.filter(
+      e => e.timestamp >= startDate.getTime() && e.timestamp <= endOfToday.getTime()
+    );
+    const inPriorPeriod = enrollmentTimes.filter(
+      e => e.timestamp >= priorPeriodStartDate.getTime() && e.timestamp < startDate.getTime()
+    );
+
+    let changePercentage: number | null = null;
+    if (inPriorPeriod.length > 0) {
+      changePercentage = Math.round(((inCurrentPeriod.length - inPriorPeriod.length) / inPriorPeriod.length) * 100);
+    } else if (inCurrentPeriod.length > 0) {
+      changePercentage = 100;
+    }
+
+    // Generate buckets
+    // If daysCount <= 31, generate daily points
+    // If daysCount > 31, generate intervals (e.g. 15-20 points)
+    const points: Array<{
+      dateLabel: string;
+      fullDate: string;
+      newCount: number;
+      cumulativeCount: number;
+      value: number;
+    }> = [];
+
+    const stepDays = daysCount > 60 ? Math.ceil(daysCount / 20) : 1;
+    let runningCumulative = enrollmentTimes.filter(e => e.timestamp < startDate.getTime()).length;
+    let maxVal = 0;
+
+    let cursor = new Date(startDate.getTime());
+    while (cursor <= endOfToday) {
+      const bucketStart = new Date(cursor.getTime());
+      const bucketEnd = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + stepDays - 1, 23, 59, 59, 999);
+      const actualEnd = bucketEnd > endOfToday ? endOfToday : bucketEnd;
+
+      const newInBucket = enrollmentTimes.filter(
+        e => e.timestamp >= bucketStart.getTime() && e.timestamp <= actualEnd.getTime()
+      ).length;
+
+      runningCumulative += newInBucket;
+
+      const dateLabel = daysCount <= 7 
+        ? bucketStart.toLocaleDateString('en-US', { weekday: 'short' })
+        : daysCount <= 31 
+        ? bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const fullDate = bucketStart.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+
+      const val = viewMode === 'cumulative' ? runningCumulative : newInBucket;
+      if (val > maxVal) maxVal = val;
+
+      points.push({
+        dateLabel,
+        fullDate,
+        newCount: newInBucket,
+        cumulativeCount: runningCumulative,
+        value: val
+      });
+
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + stepDays, 0, 0, 0, 0);
+    }
+
+    return {
+      chartData: points,
+      periodTotal: inCurrentPeriod.length,
+      prevPeriodChange: changePercentage,
+      peakCount: maxVal
+    };
+  }, [activeEnrollments, timeRange, viewMode]);
 
   return (
     <div className="space-y-5 pb-20">
@@ -139,7 +244,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {students.length}
           </p>
           <p className="text-[11px] text-gray-400 font-medium mt-1">
-            vs last 30 days
+            Registered accounts
           </p>
         </div>
 
@@ -158,7 +263,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {courses.length}
           </p>
           <p className="text-[11px] text-gray-400 font-medium mt-1">
-            vs last 30 days
+            Academy curriculum
           </p>
         </div>
 
@@ -177,7 +282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {pendingRequests.length}
           </p>
           <p className="text-[11px] text-gray-400 font-medium mt-1">
-            vs last 30 days
+            Awaiting verification
           </p>
         </div>
 
@@ -196,85 +301,180 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {activeEnrollments.length}
           </p>
           <p className="text-[11px] text-gray-400 font-medium mt-1">
-            vs last 30 days
+            Active admissions
           </p>
         </div>
       </div>
 
-      {/* Enrollments Overview Card */}
+      {/* Enrollments Overview Card with Real Dynamic Analytics */}
       <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100/90 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-sm font-bold text-gray-950">Enrollments Overview</h3>
-            <p className="text-[11px] text-gray-400">Total verified course enrollments</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-gray-950">Enrollments Overview</h3>
+              <span className="text-[11px] font-bold text-[#0A9D8F] bg-[#E6F5F4] px-2 py-0.5 rounded-full">
+                {periodTotal} verified in period
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Live verified course admissions plotted by real enrollment dates.
+            </p>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-700">
-            <span>{timeRange}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle (Cumulative vs Daily) */}
+            <div className="inline-flex bg-gray-100 p-0.5 rounded-xl text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setViewMode('cumulative')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'cumulative'
+                    ? 'bg-white text-gray-950 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Cumulative
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('daily')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'daily'
+                    ? 'bg-white text-gray-950 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                New / Period
+              </button>
+            </div>
+
+            {/* Interactive Time Range Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 text-xs font-semibold text-gray-800 transition-all cursor-pointer shadow-2xs"
+              >
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                <span>{TIME_RANGE_LABELS[timeRange]}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-30 animate-in fade-in zoom-in-95">
+                  {(Object.keys(TIME_RANGE_LABELS) as TimeRangeOption[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setTimeRange(key);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center justify-between cursor-pointer"
+                    >
+                      <span className={timeRange === key ? 'font-bold text-[#0A9D8F]' : ''}>
+                        {TIME_RANGE_LABELS[key]}
+                      </span>
+                      {timeRange === key && <Check className="w-3.5 h-3.5 text-[#0A9D8F]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* SVG Chart */}
-        <div className="w-full overflow-hidden pt-2">
-          <div className="relative w-full h-[160px]">
-            {/* Y Axis Grid Lines */}
-            <div className="absolute inset-0 flex flex-col justify-between text-[10px] text-gray-400 font-medium pointer-events-none">
-              <div className="flex items-center gap-2 border-b border-gray-100/60 pb-1">
-                <span className="w-6 text-right">240</span>
-              </div>
-              <div className="flex items-center gap-2 border-b border-gray-100/60 pb-1">
-                <span className="w-6 text-right">180</span>
-              </div>
-              <div className="flex items-center gap-2 border-b border-gray-100/60 pb-1">
-                <span className="w-6 text-right">120</span>
-              </div>
-              <div className="flex items-center gap-2 border-b border-gray-100/60 pb-1">
-                <span className="w-6 text-right">60</span>
-              </div>
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-1">
-                <span className="w-6 text-right">0</span>
-              </div>
-            </div>
-
-            {/* SVG Line Graph */}
-            <svg 
-              className="absolute inset-0 w-full h-[130px] pl-8 pr-2" 
-              viewBox="0 0 330 130" 
-              preserveAspectRatio="none"
+        {/* Real Dynamic Chart */}
+        <div className="w-full h-[180px] pt-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart 
+              data={chartData} 
+              margin={{ top: 10, right: 10, left: -22, bottom: 0 }}
             >
-              <path
-                d={svgPath}
-                fill="none"
-                stroke="#0A9D8F"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <defs>
+                <linearGradient id="enrollmentGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#0A9D8F" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#0A9D8F" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+              <XAxis 
+                dataKey="dateLabel" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                interval={timeRange === '30d' ? 4 : timeRange === '90d' ? 2 : 'preserveStartEnd'}
               />
-              {chartPoints.map((point, index) => (
-                <circle
-                  key={index}
-                  cx={point.x}
-                  cy={point.y}
-                  r="4"
-                  className="fill-[#0A9D8F] stroke-white stroke-2"
-                />
-              ))}
-            </svg>
-
-            {/* X Axis Labels */}
-            <div className="absolute bottom-0 left-8 right-2 flex justify-between text-[10px] font-semibold text-gray-400 pt-2">
-              {datePoints.map((d, i) => (
-                <span key={i}>{d}</span>
-              ))}
-            </div>
-          </div>
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                allowDecimals={false}
+                domain={[0, (dataMax: number) => Math.max(4, Math.ceil(dataMax * 1.25))]}
+              />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-gray-950 text-white px-3 py-2 rounded-xl text-xs shadow-xl border border-gray-800 pointer-events-none">
+                        <p className="text-[10px] text-gray-400 font-medium">{data.fullDate}</p>
+                        <p className="font-extrabold text-[#2DD4BF] text-sm mt-0.5">
+                          {data.value} {viewMode === 'cumulative' ? 'Total Enrolled' : 'New Admissions'}
+                        </p>
+                        {viewMode === 'cumulative' && (
+                          <p className="text-[10px] text-gray-300 mt-0.5">
+                            +{data.newCount} on this day
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#0A9D8F" 
+                strokeWidth={2.5} 
+                fillOpacity={1} 
+                fill="url(#enrollmentGrad)" 
+                activeDot={{ r: 5, fill: '#0A9D8F', stroke: '#FFFFFF', strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        {totalEnrolled === 0 && (
-          <p className="text-center text-xs text-gray-400 mt-2 font-medium">
-            0 enrollments recorded in the selected period.
-          </p>
-        )}
+        {/* Dynamic Period Summary Footer */}
+        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 font-medium">Period Trend:</span>
+            {prevPeriodChange !== null ? (
+              <span className={`inline-flex items-center gap-1 font-bold ${
+                prevPeriodChange >= 0 ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {prevPeriodChange >= 0 ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingDown className="w-3.5 h-3.5" />
+                )}
+                {prevPeriodChange >= 0 ? `+${prevPeriodChange}%` : `${prevPeriodChange}%`} vs prior period
+              </span>
+            ) : (
+              <span className="text-gray-400 font-normal">Baseline period</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 text-gray-500 text-[11px]">
+            <span>Total Active Academy Admissions: <strong className="text-gray-900 font-bold">{activeEnrollments.length}</strong></span>
+            {periodTotal === 0 && (
+              <span className="text-amber-600 font-medium">
+                (No new approvals within {TIME_RANGE_LABELS[timeRange].toLowerCase()})
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Recent Course Requests Preview */}

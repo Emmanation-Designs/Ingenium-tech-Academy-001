@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification, CourseCategory } from '../types';
+import { StudentClassroom } from './student/StudentClassroom';
+import { StudentCourseDashboard } from './student/StudentCourseDashboard';
 import { 
   Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
   MapPin, Clock, Phone, AlertCircle, ChevronRight, Plus, Send, Search,
@@ -138,7 +140,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   theme,
   onToggleTheme,
 }) => {
-  const [activeTab, setActiveTab] = useState<'home' | 'selections' | 'learning' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'classroom' | 'learning' | 'selections' | 'profile'>('home');
+  const [selectedCourseForDashboard, setSelectedCourseForDashboard] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selections, setSelections] = useState<CourseSelection[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -368,6 +371,20 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     }
     return <BookOpen className={iconClass} />;
   };
+
+  if (selectedCourseForDashboard) {
+    return (
+      <StudentCourseDashboard
+        course={selectedCourseForDashboard}
+        currentUser={currentUser}
+        onBack={() => setSelectedCourseForDashboard(null)}
+        onOpenClassroom={() => {
+          setSelectedCourseForDashboard(null);
+          setActiveTab('classroom');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#0A9D8F]/30">
@@ -809,6 +826,16 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           </div>
         )}
 
+        {/* MAIN TAB: MY CLASSROOM */}
+        {activeTab === 'classroom' && (
+          <StudentClassroom
+            currentUser={currentUser}
+            approvedCourses={courses.filter(c => enrollments.some(e => e.course_id === c.id))}
+            activeSchedules={Object.values(schedulesMap).flat()}
+            onOpenCourse={(c) => setSelectedCourseForDashboard(c)}
+          />
+        )}
+
         {/* MAIN TAB 2: MY SELECTION */}
         {activeTab === 'selections' && (
           <div className="flex-1 flex flex-col bg-white">
@@ -992,19 +1019,29 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
                         {/* Syllabus, syllabus notes, and active Classroom URL */}
                         <div className="pt-2 border-t border-[#F5F5F5] space-y-2.5 text-xs">
-                          <div className="flex justify-between items-center">
-                            <span className="font-normal text-zinc-500">Syllabus Complete</span>
-                            <span className="font-semibold text-[#0A9D8F]">0%</span>
-                          </div>
-
                           {/* Live Meeting Link (Enforcing 15-minute window) */}
                           <StudentClassMeetingLink scheduleId={enr.schedule_id} />
 
-                          <div className="p-3 bg-zinc-50 rounded-xl space-y-1">
-                            <p className="font-medium text-zinc-900">Class curriculum and video logs</p>
-                            <p className="text-[11px] text-zinc-500 font-normal leading-relaxed">
-                              Live classes and material links will be posted here by your assigned instructor.
-                            </p>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (courseObj) setSelectedCourseForDashboard(courseObj);
+                              }}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                            >
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span>Course Dashboard & Lessons</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('classroom')}
+                              className="py-2.5 px-3 rounded-xl bg-[#E6F5F4] hover:bg-[#0A9D8F] text-[#0A9D8F] hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                              title="Go to Live Classroom"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>Classroom</span>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1138,7 +1175,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         )}
 
         {/* STICKY BOTTOM TASKBAR - Matching bottom navigation look of reference */}
-        <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2.5 px-6 flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+        <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2 px-4 flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
           
           <button
             onClick={() => setActiveTab('home')}
@@ -1151,13 +1188,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('selections')}
+            onClick={() => setActiveTab('classroom')}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'selections' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'classroom' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <Heart className={`w-5 h-5 stroke-[2] ${activeTab === 'selections' ? 'fill-current' : ''}`} />
-            <span className="text-[10px] font-medium">My Selection</span>
+            <Video className={`w-5 h-5 stroke-[2] ${activeTab === 'classroom' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">Classroom</span>
           </button>
 
           <button
@@ -1168,6 +1205,16 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           >
             <BookOpen className={`w-5 h-5 stroke-[2] ${activeTab === 'learning' ? 'fill-current' : ''}`} />
             <span className="text-[10px] font-medium">My Learning</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('selections')}
+            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
+              activeTab === 'selections' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+            }`}
+          >
+            <Heart className={`w-5 h-5 stroke-[2] ${activeTab === 'selections' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">Selection</span>
           </button>
 
           <button

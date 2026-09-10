@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { realtimeSync } from './realtimeSync';
+import { learningService } from './learningService';
 import { 
   Profile, Course, CourseSchedule, CourseSelection, 
   Enrollment, Payment, UserRole, SelectionStatus, PaymentStatus, EnrollmentStatus,
@@ -1714,5 +1715,6 @@ export const dataService = {
   },
   saveClassMeetingUrl(scheduleId: string, meetingUrl: string) {
     return dataService.teachers.saveMeetingUrl(scheduleId, meetingUrl);
-  }
+  },
+  learning: learningService
 };
