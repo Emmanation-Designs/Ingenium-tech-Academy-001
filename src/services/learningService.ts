@@ -745,7 +745,7 @@ export const learningService = {
 
     const { data, error } = await supabase
       .from('quiz_attempts')
-      .select('*, quizzes(title)')
+      .select('*, quizzes!quiz_id(title)')
       .eq('course_id', courseId)
       .eq('student_id', studentId)
       .order('submitted_at', { ascending: false });
@@ -769,7 +769,7 @@ export const learningService = {
 
     const { data, error } = await supabase
       .from('quiz_attempts')
-      .select('*, profiles(full_name, email)')
+      .select('*, profiles!student_id(full_name, email)')
       .eq('quiz_id', quizId)
       .order('submitted_at', { ascending: false });
 

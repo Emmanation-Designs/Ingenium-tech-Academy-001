@@ -50,16 +50,16 @@ class RealtimeSyncService {
   }
 
   /**
-   * Revalidate on window focus and document visibility
+   * Revalidate on document visibility change and network online events
    */
   private initVisibilityAndFocusListeners() {
     if (typeof window === 'undefined') return;
 
-    const handleFocusOrVisibility = () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         const timeSinceLastSync = Date.now() - this.lastSyncTime;
-        // If it's been more than 6 seconds since last sync, refresh in background
-        if (timeSinceLastSync > 6000) {
+        // Only refresh if tab was hidden and at least 45 seconds have passed
+        if (timeSinceLastSync > 45000) {
           this.emitSync({
             source: 'focus',
             timestamp: Date.now()
@@ -71,33 +71,36 @@ class RealtimeSyncService {
       }
     };
 
-    window.addEventListener('focus', handleFocusOrVisibility);
-    document.addEventListener('visibilitychange', handleFocusOrVisibility);
+    // Note: Do NOT listen to raw window 'focus' in iframe environments as clicking any control triggers focus
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', () => {
       this.emitSync({ source: 'focus', timestamp: Date.now() });
       this.startAdaptivePolling();
     });
 
-    // Start polling if document is currently visible
+    // Start gentle polling if document is currently visible
     if (document.visibilityState === 'visible') {
       this.startAdaptivePolling();
     }
   }
 
   /**
-   * Adaptive Heartbeat Polling: runs periodically when the app is active
+   * Adaptive Heartbeat Polling: runs calmly in background (every 60s)
    */
   private startAdaptivePolling() {
     this.stopAdaptivePolling();
-    // Refresh every 15 seconds while tab is active
+    // Gentle 60-second heartbeat while active tab is visible
     this.pollingTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        this.emitSync({
-          source: 'polling',
-          timestamp: Date.now()
-        });
+        const timeSinceLastSync = Date.now() - this.lastSyncTime;
+        if (timeSinceLastSync >= 45000) {
+          this.emitSync({
+            source: 'polling',
+            timestamp: Date.now()
+          });
+        }
       }
-    }, 15000);
+    }, 60000);
   }
 
   private stopAdaptivePolling() {

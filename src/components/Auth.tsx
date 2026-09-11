@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { Profile } from '../types';
-import { Mail, Lock, User, Phone, Globe, ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Globe, ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 interface AuthProps {
   onSuccess: (user: Profile) => void;
@@ -16,7 +16,6 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('Nigeria');
   const [timezone, setTimezone] = useState('Africa/Lagos');
 
@@ -61,7 +60,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
           email,
           password,
           fullName,
-          phone,
+          '',
           country,
           timezone
         );
@@ -162,21 +161,6 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="E.g. John Doe"
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
-                  />
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-400 mb-1.5">Phone Number (WhatsApp Preferred)</label>
-                <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="E.g. +234 803 123 4567"
                     className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>

@@ -858,13 +858,14 @@ export const dataService = {
     async getCourseSelections(studentId?: string): Promise<CourseSelection[]> {
       if (!isSupabaseConfigured || !supabase) return [];
       try {
+        // Disambiguate foreign keys explicitly with !column_name to prevent PostgREST/Postgres ambiguity
         let query = supabase
           .from('course_selections')
           .select(`
             *,
-            course:courses(title),
-            student:profiles(email, full_name),
-            schedule:course_schedules(label)
+            course:courses!course_id(title),
+            student:profiles!student_id(email, full_name),
+            schedule:course_schedules!schedule_id(label)
           `);
         
         if (studentId) {
@@ -873,8 +874,26 @@ export const dataService = {
 
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
-          console.error('[Supabase] Error fetching selections:', error.message);
-          return [];
+          console.warn('[Supabase] Disambiguated select returned error, using fallback:', error.message);
+          // Resilient fallback: simple flat query without embeds
+          let simpleQuery = supabase.from('course_selections').select('*');
+          if (studentId) {
+            simpleQuery = simpleQuery.eq('student_id', studentId);
+          }
+          const { data: flatData, error: flatErr } = await simpleQuery.order('created_at', { ascending: false });
+          if (flatErr) {
+            console.error('[Supabase] Error fetching selections:', flatErr.message);
+            return [];
+          }
+          const { data: coursesList } = await supabase.from('courses').select('id, title');
+          const courseMap = new Map((coursesList || []).map((c: any) => [c.id, c.title]));
+          return ((flatData || []) as any[]).map(s => ({
+            ...s,
+            course_title: courseMap.get(s.course_id) || 'Course',
+            student_email: '',
+            student_name: '',
+            schedule_label: ''
+          }));
         }
 
         return ((data || []) as any[]).map(s => ({
@@ -990,8 +1009,8 @@ export const dataService = {
           .from('enrollments')
           .select(`
             *,
-            course:courses(title, image_url),
-            schedule:course_schedules(label)
+            course:courses!course_id(title, image_url),
+            schedule:course_schedules!schedule_id(label)
           `);
         
         if (studentId) {
@@ -1000,8 +1019,27 @@ export const dataService = {
 
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
-          console.error('[Supabase] Error fetching enrollments:', error.message);
-          return [];
+          console.warn('[Supabase] Disambiguated enrollments failed, using fallback:', error.message);
+          let simpleQuery = supabase.from('enrollments').select('*');
+          if (studentId) {
+            simpleQuery = simpleQuery.eq('student_id', studentId);
+          }
+          const { data: flatData, error: flatErr } = await simpleQuery.order('created_at', { ascending: false });
+          if (flatErr) {
+            console.error('[Supabase] Error fetching enrollments:', flatErr.message);
+            return [];
+          }
+          const { data: coursesList } = await supabase.from('courses').select('id, title, image_url');
+          const courseMap = new Map((coursesList || []).map((c: any) => [c.id, c]));
+          return ((flatData || []) as any[]).map(e => {
+            const c = courseMap.get(e.course_id);
+            return {
+              ...e,
+              course_title: c?.title || 'Course',
+              course_image: c?.image_url,
+              schedule_label: ''
+            };
+          });
         }
 
         return ((data || []) as any[]).map(e => ({
@@ -1060,7 +1098,7 @@ export const dataService = {
           .from('payments')
           .select(`
             *,
-            student:profiles(full_name)
+            student:profiles!student_id(full_name)
           `);
         
         if (studentId) {
@@ -1377,7 +1415,7 @@ export const dataService = {
       try {
         let query = supabase
           .from('teacher_course_assignments')
-          .select('*, courses(title), course_schedules(label), profiles:teacher_id(full_name, email)');
+          .select('*, courses!course_id(title), course_schedules!schedule_id(label), profiles:teacher_id!teacher_id(full_name, email)');
 
         if (teacherId) {
           query = query.eq('teacher_id', teacherId);
@@ -1385,8 +1423,31 @@ export const dataService = {
 
         const { data, error } = await query;
         if (error) {
-          console.warn('[Supabase] Error fetching teacher assignments:', error.message);
-          return [];
+          console.warn('[Supabase] Disambiguated teacher assignments query failed, falling back:', error.message);
+          let simpleQuery = supabase.from('teacher_course_assignments').select('*');
+          if (teacherId) {
+            simpleQuery = simpleQuery.eq('teacher_id', teacherId);
+          }
+          const { data: flatData, error: flatErr } = await simpleQuery;
+          if (flatErr) {
+            console.error('[Supabase] Error fetching assignments fallback:', flatErr.message);
+            return [];
+          }
+          const { data: coursesList } = await supabase.from('courses').select('id, title');
+          const courseMap = new Map((coursesList || []).map((c: any) => [c.id, c.title]));
+          return (flatData || []).map((row: any) => ({
+            id: row.id,
+            teacher_id: row.teacher_id,
+            course_id: row.course_id,
+            schedule_id: row.schedule_id,
+            assigned_by: row.assigned_by,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            course_title: courseMap.get(row.course_id) || 'Course',
+            schedule_label: undefined,
+            teacher_name: undefined,
+            teacher_email: undefined
+          }));
         }
 
         return (data || []).map((row: any) => ({
@@ -1480,14 +1541,14 @@ export const dataService = {
       if (!isSupabaseConfigured || !supabase) return [];
 
       try {
-        const { data: assignments } = await supabase
+        const { data: assignments, error: assnErr } = await supabase
           .from('teacher_course_assignments')
-          .select('*, courses(*), course_schedules(*)')
+          .select('*, courses!course_id(*), course_schedules!schedule_id(*)')
           .eq('teacher_id', teacherId);
 
-        const { data: directSchedules } = await supabase
+        const { data: directSchedules, error: schedErr } = await supabase
           .from('course_schedules')
-          .select('*, courses(*)')
+          .select('*, courses!course_id(*)')
           .eq('teacher_id', teacherId);
 
         const classesMap = new Map<string, any>();
@@ -1522,7 +1583,7 @@ export const dataService = {
         for (const item of Array.from(classesMap.values())) {
           let enrollmentsQuery = supabase
             .from('enrollments')
-            .select('*, profiles:student_id(id, full_name, email)')
+            .select('*, profiles:student_id!student_id(id, full_name, email)')
             .eq('course_id', item.course.id)
             .eq('status', 'active')
             .eq('access_granted', true);

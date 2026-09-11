@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  GraduationCap, Mail, Lock, User, Phone, Globe, 
+  GraduationCap, Mail, Lock, User, Globe, 
   CheckCircle, AlertCircle, Loader2, ArrowRight, Check
 } from 'lucide-react';
 import { dataService } from '../../services/dataService';
@@ -36,7 +36,6 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
   const [fullName, setFullName] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
   const [timezone, setTimezone] = useState<string>('Africa/Lagos');
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -97,7 +96,7 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
         invitationData.invited_email,
         password,
         fullName,
-        phone,
+        '',
         'Nigeria',
         timezone
       );
@@ -370,40 +369,22 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-800 mb-1">
-                    Phone (Optional)
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      placeholder="+234..."
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-800 mb-1">
-                    Timezone
-                  </label>
-                  <div className="relative">
-                    <Globe className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <select
-                      value={timezone}
-                      onChange={e => setTimezone(e.target.value)}
-                      className="w-full pl-8 pr-2 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
-                    >
-                      <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
-                      <option value="UTC">UTC / GMT</option>
-                      <option value="Europe/London">Europe/London</option>
-                      <option value="America/New_York">America/New_York (EST)</option>
-                    </select>
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1">
+                  Timezone
+                </label>
+                <div className="relative">
+                  <Globe className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <select
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                    className="w-full pl-8 pr-2 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                  >
+                    <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+                    <option value="UTC">UTC / GMT</option>
+                    <option value="Europe/London">Europe/London</option>
+                    <option value="America/New_York">America/New_York (EST)</option>
+                  </select>
                 </div>
               </div>
 

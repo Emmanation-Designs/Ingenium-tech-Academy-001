@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notification, CourseCategory } from '../types';
 import { StudentClassroom } from './student/StudentClassroom';
 import { StudentCourseDashboard } from './student/StudentCourseDashboard';
+import { CourseProgressView } from './student/CourseProgressView';
 import { 
   Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
-  MapPin, Clock, Phone, AlertCircle, ChevronRight, Plus, Send, Search,
+  MapPin, Clock, AlertCircle, ChevronRight, Plus, Send, Search,
   SlidersHorizontal, Trash2, Camera, HelpCircle, Info, Settings, Globe, Lock, ChevronLeft,
   Check, BarChart2, Video, Pencil, Sparkles, X, Database, Palette, Megaphone, Code, Terminal, PenTool
 } from 'lucide-react';
@@ -52,7 +53,7 @@ const getCourseDescription = (course: Course) => {
   return 'Participate in professional instructor-led sessions, live weekly labs, and build a high-caliber portfolio to accelerate your career.';
 };
 
-const StudentClassMeetingLink: React.FC<{ scheduleId?: string }> = ({ scheduleId }) => {
+const StudentClassMeetingLink: React.FC<{ scheduleId?: string; onOpenClassroom?: () => void }> = ({ scheduleId, onOpenClassroom }) => {
   const [meetingData, setMeetingData] = useState<{ accessible: boolean; meeting_url?: string; message?: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -90,24 +91,23 @@ const StudentClassMeetingLink: React.FC<{ scheduleId?: string }> = ({ scheduleId
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0A9D8F]">
             <Video className="w-3.5 h-3.5" />
-            <span>Live Class Room Active</span>
+            <span>Live Classroom Active</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0A9D8F] text-white">
             Ready to Join
           </span>
         </div>
         <p className="text-[11px] text-zinc-600 leading-relaxed">
-          Your class session is currently active. Click below to enter your Google Meet classroom.
+          Your class session is currently active. Tap below to enter the live classroom directly inside the app.
         </p>
-        <a
-          href={meetingData.meeting_url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs"
+        <button
+          type="button"
+          onClick={onOpenClassroom}
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs cursor-pointer"
         >
           <Video className="w-3.5 h-3.5" />
-          <span>Join Google Meet Class</span>
-        </a>
+          <span>Enter Live Classroom</span>
+        </button>
       </div>
     );
   }
@@ -140,7 +140,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   theme,
   onToggleTheme,
 }) => {
-  const [activeTab, setActiveTab] = useState<'home' | 'classroom' | 'learning' | 'selections' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'classroom' | 'learning' | 'progress' | 'selections' | 'profile'>('classroom');
   const [selectedCourseForDashboard, setSelectedCourseForDashboard] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selections, setSelections] = useState<CourseSelection[]>([]);
@@ -176,40 +176,18 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     return matchesSearch && matchesCategory;
   });
 
+  // Memoize approved courses and active schedules to avoid continuous reference recreation and flicker
+  const approvedCourses = useMemo(() => {
+    const enrolledIds = new Set(enrollments.map(e => e.course_id));
+    return courses.filter(c => enrolledIds.has(c.id));
+  }, [courses, enrollments]);
+
+  const activeSchedules = useMemo(() => {
+    return Object.values(schedulesMap).flat();
+  }, [schedulesMap]);
+
   const [loading, setLoading] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-
-  // Phone number addition/editing states
-  const [isAddingPhone, setIsAddingPhone] = useState(false);
-  const [phoneInput, setPhoneInput] = useState('');
-  const [savingPhone, setSavingPhone] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-
-  const handleSavePhone = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanPhone = phoneInput.trim();
-    if (!cleanPhone) {
-      setPhoneError('Please enter a valid phone number');
-      return;
-    }
-    setSavingPhone(true);
-    setPhoneError(null);
-    try {
-      const { profile, error } = await dataService.profile.updateProfile(currentUser.id, {
-        phone: cleanPhone,
-      });
-      if (error) {
-        setPhoneError(error);
-      } else if (profile) {
-        onProfileUpdate(profile);
-        setIsAddingPhone(false);
-      }
-    } catch (err: any) {
-      setPhoneError(err.message || 'Failed to update phone number');
-    } finally {
-      setSavingPhone(false);
-    }
-  };
 
   // Load all student specific data
   const loadStudentData = async (isBackground = false) => {
@@ -830,9 +808,22 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {activeTab === 'classroom' && (
           <StudentClassroom
             currentUser={currentUser}
-            approvedCourses={courses.filter(c => enrollments.some(e => e.course_id === c.id))}
-            activeSchedules={Object.values(schedulesMap).flat()}
+            approvedCourses={approvedCourses}
+            activeSchedules={activeSchedules}
             onOpenCourse={(c) => setSelectedCourseForDashboard(c)}
+          />
+        )}
+
+        {/* MAIN TAB: PROGRESS (Calculated from Real Supabase Learning Records) */}
+        {activeTab === 'progress' && (
+          <CourseProgressView 
+            currentUser={currentUser}
+            courses={approvedCourses}
+            onBack={() => setActiveTab('home')}
+            onOpenLesson={(course) => {
+              setSelectedCourseForDashboard(course);
+              setActiveTab('classroom');
+            }}
           />
         )}
 
@@ -1020,7 +1011,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         {/* Syllabus, syllabus notes, and active Classroom URL */}
                         <div className="pt-2 border-t border-[#F5F5F5] space-y-2.5 text-xs">
                           {/* Live Meeting Link (Enforcing 15-minute window) */}
-                          <StudentClassMeetingLink scheduleId={enr.schedule_id} />
+                          <StudentClassMeetingLink 
+                            scheduleId={enr.schedule_id} 
+                            onOpenClassroom={() => {
+                              setSelectedCourseForDashboard(null);
+                              setActiveTab('classroom');
+                            }}
+                          />
 
                           <div className="flex items-center gap-2 pt-1">
                             <button
@@ -1035,7 +1032,10 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setActiveTab('classroom')}
+                              onClick={() => {
+                                setSelectedCourseForDashboard(null);
+                                setActiveTab('classroom');
+                              }}
                               className="py-2.5 px-3 rounded-xl bg-[#E6F5F4] hover:bg-[#0A9D8F] text-[#0A9D8F] hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                               title="Go to Live Classroom"
                             >
@@ -1103,43 +1103,34 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   <span className="font-normal text-zinc-500">Email</span>
                   <span className="font-semibold text-zinc-700 truncate max-w-[180px]">{currentUser.email}</span>
                 </div>
-                <div className="p-3.5 flex items-center justify-between text-xs">
-                  <span className="font-normal text-zinc-500">Phone</span>
-                  {currentUser.phone && currentUser.phone.trim() !== '' ? (
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-zinc-900">{currentUser.phone}</span>
-                      <button 
-                        onClick={() => {
-                          setPhoneInput(currentUser.phone || '');
-                          setPhoneError(null);
-                          setIsAddingPhone(true);
-                        }}
-                        className="text-zinc-400 hover:text-[#0A9D8F] transition-colors p-0.5 cursor-pointer"
-                        title="Edit Phone"
-                        aria-label="Edit Phone Number"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setPhoneInput('');
-                        setPhoneError(null);
-                        setIsAddingPhone(true);
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#E6F5F4] hover:bg-[#0A9D8F]/20 text-[#087A6F] font-semibold text-xs transition-colors cursor-pointer active:scale-95"
-                      aria-label="Add Phone Number"
-                    >
-                      <Plus className="w-3 h-3 stroke-[2.5]" />
-                      <span>Add</span>
-                    </button>
-                  )}
-                </div>
+                {currentUser.phone && currentUser.phone.trim() !== '' && (
+                  <div className="p-3.5 flex items-center justify-between text-xs">
+                    <span className="font-normal text-zinc-500">Phone</span>
+                    <span className="font-semibold text-zinc-900">{currentUser.phone}</span>
+                  </div>
+                )}
               </div>
 
               {/* Option Rows Menu list matching Screen 6 */}
               <div className="space-y-2.5">
+                <button 
+                  onClick={() => setActiveTab('selections')}
+                  className="w-full p-3.5 bg-white border border-[#EAEAEA] rounded-xl flex items-center justify-between hover:border-zinc-300 transition-colors text-xs font-medium text-zinc-800 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <Heart className="w-4 h-4 text-[#0A9D8F]" />
+                    <span>My Course Selections</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {selections.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] text-[10px] font-bold">
+                        {selections.length}
+                      </span>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-zinc-400" />
+                  </div>
+                </button>
+
                 {[
                   { label: 'Settings', icon: <Settings className="w-4 h-4 text-zinc-500" /> },
                   { label: 'Help & Support', icon: <HelpCircle className="w-4 h-4 text-zinc-500" /> },
@@ -1174,135 +1165,75 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           </div>
         )}
 
-        {/* STICKY BOTTOM TASKBAR - Matching bottom navigation look of reference */}
+        {/* STICKY BOTTOM TASKBAR - Matching 5 tabs of the reference UI */}
         <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2 px-4 flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
           
           <button
-            onClick={() => setActiveTab('home')}
+            onClick={() => {
+              setSelectedCourseForDashboard(null);
+              setActiveTab('home');
+            }}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'home' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'home' && !selectedCourseForDashboard ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <HomeIcon className={`w-5 h-5 stroke-[2] ${activeTab === 'home' ? 'fill-current' : ''}`} />
+            <HomeIcon className={`w-5 h-5 stroke-[2] ${activeTab === 'home' && !selectedCourseForDashboard ? 'fill-current' : ''}`} />
             <span className="text-[10px] font-medium">Home</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('classroom')}
+            onClick={() => {
+              setSelectedCourseForDashboard(null);
+              setActiveTab('learning');
+            }}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'classroom' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'learning' && !selectedCourseForDashboard ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <Video className={`w-5 h-5 stroke-[2] ${activeTab === 'classroom' ? 'fill-current' : ''}`} />
-            <span className="text-[10px] font-medium">Classroom</span>
+            <BookOpen className={`w-5 h-5 stroke-[2] ${activeTab === 'learning' && !selectedCourseForDashboard ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">My Courses</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('learning')}
+            onClick={() => {
+              setSelectedCourseForDashboard(null);
+              setActiveTab('classroom');
+            }}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'learning' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'classroom' && !selectedCourseForDashboard ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <BookOpen className={`w-5 h-5 stroke-[2] ${activeTab === 'learning' ? 'fill-current' : ''}`} />
-            <span className="text-[10px] font-medium">My Learning</span>
+            <Video className={`w-5 h-5 stroke-[2] ${activeTab === 'classroom' && !selectedCourseForDashboard ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">My Classroom</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('selections')}
+            onClick={() => {
+              setSelectedCourseForDashboard(null);
+              setActiveTab('progress');
+            }}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'selections' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'progress' && !selectedCourseForDashboard ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <Heart className={`w-5 h-5 stroke-[2] ${activeTab === 'selections' ? 'fill-current' : ''}`} />
-            <span className="text-[10px] font-medium">Selection</span>
+            <BarChart2 className={`w-5 h-5 stroke-[2] ${activeTab === 'progress' && !selectedCourseForDashboard ? 'text-[#0A9D8F]' : ''}`} />
+            <span className="text-[10px] font-medium">Progress</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={() => {
+              setSelectedCourseForDashboard(null);
+              setActiveTab('profile');
+            }}
             className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeTab === 'profile' ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
+              activeTab === 'profile' && !selectedCourseForDashboard ? 'text-[#0A9D8F] font-semibold' : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <User className={`w-5 h-5 stroke-[2] ${activeTab === 'profile' ? 'fill-current' : ''}`} />
+            <User className={`w-5 h-5 stroke-[2] ${activeTab === 'profile' && !selectedCourseForDashboard ? 'fill-current' : ''}`} />
             <span className="text-[10px] font-medium">Profile</span>
           </button>
           
         </nav>
-
-        {/* Phone Number Modal Dialog */}
-        {isAddingPhone && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-zinc-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-[#E6F5F4] text-[#0A9D8F]">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-zinc-900">
-                    {currentUser.phone ? 'Update Phone Number' : 'Add Phone Number'}
-                  </h3>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setIsAddingPhone(false);
-                    setPhoneError(null);
-                  }}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-zinc-500 font-normal leading-relaxed">
-                Provide your WhatsApp-enabled phone number to receive class schedules, direct tutor updates, and live session links.
-              </p>
-
-              <form onSubmit={handleSavePhone} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-zinc-700">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input
-                      type="tel"
-                      autoFocus
-                      placeholder="e.g. +234 803 123 4567"
-                      value={phoneInput}
-                      onChange={(e) => {
-                        setPhoneInput(e.target.value);
-                        setPhoneError(null);
-                      }}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-zinc-50 border border-zinc-200 rounded-xl font-medium text-zinc-900 focus:outline-none focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30"
-                    />
-                  </div>
-                  {phoneError && (
-                    <p className="text-[11px] text-red-500 font-medium">{phoneError}</p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddingPhone(false);
-                      setPhoneError(null);
-                    }}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-200 text-zinc-700 text-xs font-semibold hover:bg-zinc-50 cursor-pointer transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingPhone || !phoneInput.trim()}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer transition-all active:scale-98 flex items-center justify-center gap-1.5"
-                  >
-                    {savingPhone ? 'Saving...' : 'Save Phone'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

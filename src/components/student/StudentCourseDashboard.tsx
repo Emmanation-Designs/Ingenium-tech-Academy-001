@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Course, CourseModule, CourseLesson, LessonMaterial, 
   ClassRecording, Quiz, QuizAttempt, Profile, 
@@ -51,10 +51,18 @@ export const StudentCourseDashboard: React.FC<StudentCourseDashboardProps> = ({
     setTimeout(() => setToast(null), 3500);
   };
 
+  const hasLoadedOnce = useRef<boolean>(false);
+  const inFlightRef = useRef<boolean>(false);
+
   // Load course curriculum and student progress
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (isBackground = false) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     try {
-      setLoading(true);
+      if (!isBackground && !hasLoadedOnce.current) {
+        setLoading(true);
+      }
       const [curriculum, progressData, recordingsData] = await Promise.all([
         learningService.getCourseCurriculum(course.id),
         learningService.getStudentCourseProgress(course.id, currentUser.id),
@@ -77,17 +85,19 @@ export const StudentCourseDashboard: React.FC<StudentCourseDashboardProps> = ({
           setActiveModuleTitle(parentMod?.title || '');
         }
       }
+      hasLoadedOnce.current = true;
     } catch (e) {
       console.error('Failed to load student course dashboard:', e);
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
-  }, [course.id, currentUser.id]);
+  }, [course.id, currentUser.id, activeLesson]);
 
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData(hasLoadedOnce.current);
     const unsub = realtimeSync.subscribe(() => {
-      loadDashboardData();
+      loadDashboardData(true);
     });
     return () => unsub();
   }, [loadDashboardData]);

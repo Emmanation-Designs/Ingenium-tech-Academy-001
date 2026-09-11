@@ -55,7 +55,6 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
   // Profile edit state
   const [profileName, setProfileName] = useState<string>(currentUser.full_name || '');
-  const [profilePhone, setProfilePhone] = useState<string>(currentUser.phone || '');
   const [profileTimezone, setProfileTimezone] = useState<string>(currentUser.timezone || 'Africa/Lagos');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
@@ -171,7 +170,6 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
     try {
       await dataService.profile.updateProfile(currentUser.id, {
         full_name: profileName.trim(),
-        phone: profilePhone.trim(),
         timezone: profileTimezone
       });
       setProfileSuccessMsg('Profile updated successfully.');
@@ -753,30 +751,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                       <p className="text-[10px] text-gray-400 mt-1">Teacher emails are bound by verified administrator invitations.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-800 mb-1">Phone Number</label>
-                        <input
-                          type="tel"
-                          value={profilePhone}
-                          onChange={e => setProfilePhone(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-800 mb-1">Timezone</label>
-                        <select
-                          value={profileTimezone}
-                          onChange={e => setProfileTimezone(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
-                        >
-                          <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
-                          <option value="UTC">UTC / GMT</option>
-                          <option value="Europe/London">Europe/London</option>
-                          <option value="America/New_York">America/New_York (EST)</option>
-                        </select>
-                      </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-800 mb-1">Timezone</label>
+                      <select
+                        value={profileTimezone}
+                        onChange={e => setProfileTimezone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                      >
+                        <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+                        <option value="UTC">UTC / GMT</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="America/New_York">America/New_York (EST)</option>
+                      </select>
                     </div>
 
                     <button
