@@ -8,6 +8,7 @@ import { Profile, Course, CourseSchedule } from '../types';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { TeacherCourseWorkspace } from './teacher/TeacherCourseWorkspace';
+import { BrandLogo } from './common/BrandLogo';
 
 interface TeacherAppProps {
   currentUser: Profile;
@@ -221,9 +222,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#0A9D8F] text-white flex items-center justify-center font-black shadow-xs">
-              <GraduationCap className="w-5 h-5 stroke-[2.5]" />
-            </div>
+            <BrandLogo size="md" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm tracking-tight text-gray-950">

@@ -1,0 +1,433 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Teal Cube Gradients -->
+    <!-- Top Face Surface Gradient -->
+    <linearGradient id="cubeTopGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#55C9BD" />
+      <stop offset="50%" stop-color="#3EB0A3" />
+      <stop offset="100%" stop-color="#2D9A8E" />
+    </linearGradient>
+
+    <!-- Outer Left Face (Shaded side) -->
+    <linearGradient id="cubeLeftGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A6660" />
+      <stop offset="60%" stop-color="#114C47" />
+      <stop offset="100%" stop-color="#093531" />
+    </linearGradient>
+
+    <!-- Outer Left Lower Tier (Slightly darker bottom) -->
+    <linearGradient id="cubeLeftLowerGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#145650" />
+      <stop offset="100%" stop-color="#072B28" />
+    </linearGradient>
+
+    <!-- Outer Right Face (Illuminated side) -->
+    <linearGradient id="cubeRightGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34A397" />
+      <stop offset="60%" stop-color="#268B80" />
+      <stop offset="100%" stop-color="#17635B" />
+    </linearGradient>
+
+    <!-- Outer Right Lower Tier -->
+    <linearGradient id="cubeRightLowerGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2C9488" />
+      <stop offset="100%" stop-color="#12564F" />
+    </linearGradient>
+
+    <!-- Inner Cutout Chamber Gradients -->
+    <linearGradient id="innerLeftWallGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E6E67" />
+      <stop offset="100%" stop-color="#134F4A" />
+    </linearGradient>
+
+    <linearGradient id="innerRightWallGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F433E" />
+      <stop offset="100%" stop-color="#082A27" />
+    </linearGradient>
+
+    <linearGradient id="innerFloorGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2B9387" />
+      <stop offset="100%" stop-color="#1B6D64" />
+    </linearGradient>
+
+    <!-- Bevel & Seam Shadows -->
+    <linearGradient id="seamShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#051C1A" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#051C1A" stop-opacity="0.1" />
+    </linearGradient>
+
+    <!-- Headset Headband Gradients -->
+    <linearGradient id="headbandGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#4B5A66" />
+      <stop offset="25%" stop-color="#333E47" />
+      <stop offset="70%" stop-color="#222A30" />
+      <stop offset="100%" stop-color="#151A1E" />
+    </linearGradient>
+
+    <linearGradient id="headbandInnerGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#2E3840" />
+      <stop offset="100%" stop-color="#11161A" />
+    </linearGradient>
+
+    <!-- Earcup Gradients -->
+    <radialGradient id="cupLeftOuter" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4A5966" />
+      <stop offset="60%" stop-color="#28323B" />
+      <stop offset="100%" stop-color="#171D22" />
+    </radialGradient>
+
+    <radialGradient id="cupRightOuter" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4A5966" />
+      <stop offset="60%" stop-color="#28323B" />
+      <stop offset="100%" stop-color="#171D22" />
+    </radialGradient>
+
+    <linearGradient id="cupCushionGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E252C" />
+      <stop offset="100%" stop-color="#0E1215" />
+    </linearGradient>
+
+    <!-- Mic Arm & Capsule Gradients -->
+    <linearGradient id="micArmGrad" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38444E" />
+      <stop offset="50%" stop-color="#242C33" />
+      <stop offset="100%" stop-color="#192025" />
+    </linearGradient>
+
+    <linearGradient id="micCapsuleGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#556573" />
+      <stop offset="35%" stop-color="#313C45" />
+      <stop offset="80%" stop-color="#1E252C" />
+      <stop offset="100%" stop-color="#12171B" />
+    </linearGradient>
+  </defs>
+
+  <!-- ========================================================= -->
+  <!-- 1. HEADBAND (BACKGROUND PORTION BEHIND TOP CUBE CORNER)   -->
+  <!-- ========================================================= -->
+  <g id="headset-back">
+    <!-- Smooth Headband Arc (Outer & Inner Path) -->
+    <path
+      d="M 86 270 
+         C 84 140, 140 45, 250 45 
+         C 360 45, 416 140, 414 270 
+         L 396 270 
+         C 398 152, 348 64, 250 64 
+         C 152 64, 102 152, 104 270 
+         Z"
+      fill="url(#headbandGrad)"
+    />
+    <!-- Headband Top Highlight Ridge -->
+    <path
+      d="M 120 160 
+         C 150 78, 200 52, 250 52 
+         C 300 52, 350 78, 380 160"
+      stroke="#5A6C7A"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.6"
+    />
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- 2. ISOMETRIC HOLLOW CUBE (INGENIUM TECH ACADEMY CUBE)     -->
+  <!-- ========================================================= -->
+  <g id="isometric-cube">
+
+    <!-- A. OUTER LEFT FACE (Upper Tier) -->
+    <polygon
+      points="115,182  250,260  250,332  115,254"
+      fill="url(#cubeLeftGrad)"
+    />
+
+    <!-- B. OUTER LEFT FACE (Lower Tier) -->
+    <polygon
+      points="115,260  250,338  250,432  115,354"
+      fill="url(#cubeLeftLowerGrad)"
+    />
+
+    <!-- Left Horizontal Seam Groove -->
+    <polygon
+      points="115,254  250,332  250,338  115,260"
+      fill="#051C1A"
+      opacity="0.75"
+    />
+    <line
+      x1="115" y1="260" x2="250" y2="338"
+      stroke="#1E6E66"
+      stroke-width="1.2"
+      opacity="0.8"
+    />
+
+    <!-- C. OUTER RIGHT FACE (Upper Tier) -->
+    <polygon
+      points="250,260  385,182  385,254  250,332"
+      fill="url(#cubeRightGrad)"
+    />
+
+    <!-- D. OUTER RIGHT FACE (Lower Tier) -->
+    <polygon
+      points="250,338  385,260  385,354  250,432"
+      fill="url(#cubeRightLowerGrad)"
+    />
+
+    <!-- Right Horizontal Seam Groove -->
+    <polygon
+      points="250,332  385,254  385,260  250,338"
+      fill="#072B27"
+      opacity="0.75"
+    />
+    <line
+      x1="250" y1="338" x2="385" y2="260"
+      stroke="#38B3A6"
+      stroke-width="1.2"
+      opacity="0.8"
+    />
+
+    <!-- E. INNER CUTOUT CHAMBER (Inside of Hollow Cube) -->
+    <!-- Inner Floor -->
+    <polygon
+      points="250,210  298,238  250,266  202,238"
+      fill="url(#innerFloorGrad)"
+    />
+
+    <!-- Inner Right-Facing Back Wall (Dark Shadowed) -->
+    <polygon
+      points="250,146  322,187  322,228  250,187"
+      fill="url(#innerRightWallGrad)"
+    />
+
+    <!-- Inner Left-Facing Back Wall (Medium Shaded) -->
+    <polygon
+      points="178,187  250,146  250,187  178,228"
+      fill="url(#innerLeftWallGrad)"
+    />
+
+    <!-- Inner Chamber Depth Vertical Drop Lines -->
+    <line
+      x1="250" y1="146" x2="250" y2="266"
+      stroke="#0B302C"
+      stroke-width="1.5"
+      opacity="0.6"
+    />
+
+    <!-- F. TOP FACE SURFACE (Hollow Ring / Diamond Face) -->
+    <!-- Outer Diamond with Inner Diamond Cutout using evenodd fill -->
+    <path
+      d="M 250 106 
+         L 385 182 
+         L 250 260 
+         L 115 182 
+         Z 
+         M 250 146 
+         L 178 187 
+         L 250 228 
+         L 322 187 
+         Z"
+      fill="url(#cubeTopGrad)"
+      fill-rule="evenodd"
+    />
+
+    <!-- Top Face Outer Edge Highlights -->
+    <polyline
+      points="115,182  250,106  385,182"
+      stroke="#79E2D6"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.6"
+    />
+
+    <!-- Inner Cutout Rim Highlights -->
+    <polyline
+      points="178,187  250,228  322,187"
+      stroke="#72DDD1"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.7"
+    />
+
+    <!-- Vertical Center Corner Seam Highlight -->
+    <line
+      x1="250" y1="260" x2="250" y2="332"
+      stroke="#45BEB1"
+      stroke-width="1.2"
+      opacity="0.75"
+    />
+    <line
+      x1="250" y1="338" x2="250" y2="432"
+      stroke="#36ACA0"
+      stroke-width="1.2"
+      opacity="0.7"
+    />
+
+    <!-- Outer Bottom Edge Shadow -->
+    <polyline
+      points="115,354  250,432  385,354"
+      stroke="#062220"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.8"
+    />
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- 3. HEADSET EARCUPS, ADJUSTMENT BARS, & MICROPHONE BOOM    -->
+  <!-- ========================================================= -->
+  <g id="headset-front">
+
+    <!-- LEFT SIDE ADJUSTMENT SLIDER -->
+    <rect
+      x="88" y="248" width="18" height="28" rx="4"
+      fill="#29333B"
+      stroke="#1A2127"
+      stroke-width="1.5"
+    />
+    <line x1="91" y1="257" x2="103" y2="257" stroke="#3D4B57" stroke-width="1.5" />
+    <line x1="91" y1="264" x2="103" y2="264" stroke="#3D4B57" stroke-width="1.5" />
+
+    <!-- RIGHT SIDE ADJUSTMENT SLIDER -->
+    <rect
+      x="394" y="248" width="18" height="28" rx="4"
+      fill="#29333B"
+      stroke="#1A2127"
+      stroke-width="1.5"
+    />
+    <line x1="397" y1="257" x2="409" y2="257" stroke="#3D4B57" stroke-width="1.5" />
+    <line x1="397" y1="264" x2="409" y2="264" stroke="#3D4B57" stroke-width="1.5" />
+
+    <!-- LEFT EARCUP -->
+    <g id="left-earcup" transform="translate(1, 0)">
+      <!-- Soft Cushion against Cube -->
+      <path
+        d="M 72 260 
+           C 60 260, 52 280, 52 305 
+           C 52 330, 60 350, 72 350 
+           L 84 350 
+           C 84 330, 84 280, 84 260 
+           Z"
+        fill="url(#cupCushionGrad)"
+      />
+      <!-- Outer Earcup Body (Pill / Cylinder Housing) -->
+      <ellipse
+        cx="72" cy="305" rx="24" ry="44"
+        fill="url(#cupLeftOuter)"
+        stroke="#161C22"
+        stroke-width="2.5"
+      />
+      <!-- Outer Cap Circular Pivot Dial -->
+      <ellipse
+        cx="64" cy="305" rx="14" ry="24"
+        fill="#212930"
+        stroke="#3B4853"
+        stroke-width="1.5"
+      />
+      <!-- Specular Highlight Curve on Earcup -->
+      <path
+        d="M 60 280 C 56 292, 56 318, 60 330"
+        stroke="#607280"
+        stroke-width="2"
+        stroke-linecap="round"
+        fill="none"
+        opacity="0.6"
+      />
+    </g>
+
+    <!-- RIGHT EARCUP -->
+    <g id="right-earcup" transform="translate(-1, 0)">
+      <!-- Soft Cushion against Cube -->
+      <path
+        d="M 428 260 
+           C 440 260, 448 280, 448 305 
+           C 448 330, 440 350, 428 350 
+           L 416 350 
+           C 416 330, 416 280, 416 260 
+           Z"
+        fill="url(#cupCushionGrad)"
+      />
+      <!-- Outer Earcup Body -->
+      <ellipse
+        cx="428" cy="305" rx="24" ry="44"
+        fill="url(#cupRightOuter)"
+        stroke="#161C22"
+        stroke-width="2.5"
+      />
+      <!-- Outer Cap Circular Pivot Dial -->
+      <ellipse
+        cx="436" cy="305" rx="14" ry="24"
+        fill="#212930"
+        stroke="#3B4853"
+        stroke-width="1.5"
+      />
+      <!-- Specular Highlight Curve on Earcup -->
+      <path
+        d="M 440 280 C 444 292, 444 318, 440 330"
+        stroke="#607280"
+        stroke-width="2"
+        stroke-linecap="round"
+        fill="none"
+        opacity="0.6"
+      />
+    </g>
+
+    <!-- BOOM MICROPHONE EXTENSION -->
+    <g id="boom-microphone">
+      <!-- Microphone Boom Arm Mount on Right Cup -->
+      <circle
+        cx="425" cy="342" r="7"
+        fill="#1E262C"
+        stroke="#3D4B56"
+        stroke-width="1.5"
+      />
+
+      <!-- Flexible Arm Wire / Gooseneck -->
+      <path
+        d="M 425 342 
+           C 446 395, 436 438, 385 456 
+           C 365 463, 342 460, 318 454"
+        stroke="url(#micArmGrad)"
+        stroke-width="7"
+        stroke-linecap="round"
+        fill="none"
+      />
+      <!-- Inner Metal Flex Highlight Line -->
+      <path
+        d="M 425 342 
+           C 444 393, 434 436, 385 454 
+           C 366 461, 343 458, 320 452"
+        stroke="#5E6F7D"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        fill="none"
+        opacity="0.75"
+      />
+
+      <!-- Microphone Capsule (Mouthpiece) -->
+      <!-- Rounded Oblong Pill Capsule -->
+      <g transform="translate(316, 452) rotate(14)">
+        <rect
+          x="-38" y="-13" width="46" height="26" rx="13"
+          fill="url(#micCapsuleGrad)"
+          stroke="#13181C"
+          stroke-width="2"
+        />
+        <!-- Foam Tip / Metal Grille Lines -->
+        <line x1="-22" y1="-8" x2="-22" y2="8" stroke="#1D242B" stroke-width="1.5" />
+        <line x1="-14" y1="-9" x2="-14" y2="9" stroke="#1D242B" stroke-width="1.5" />
+        <!-- Top Specular Highlight on Mic -->
+        <path
+          d="M -32 -6 Q -15 -10 2 -6"
+          stroke="#738696"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          fill="none"
+          opacity="0.7"
+        />
+      </g>
+    </g>
+
+  </g>
+</svg>

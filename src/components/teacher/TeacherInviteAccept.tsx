@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { dataService } from '../../services/dataService';
 import { Profile } from '../../types';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface TeacherInviteAcceptProps {
   token: string;
@@ -194,10 +195,8 @@ export const TeacherInviteAccept: React.FC<TeacherInviteAcceptProps> = ({
       <div className="bg-white rounded-3xl border border-gray-100 shadow-lg max-w-md w-full overflow-hidden">
         
         {/* Top Header Banner */}
-        <div className="bg-zinc-950 p-6 text-white text-center space-y-2 relative">
-          <div className="w-12 h-12 rounded-2xl bg-[#0A9D8F] text-white flex items-center justify-center mx-auto shadow-sm">
-            <GraduationCap className="w-6 h-6 stroke-[2]" />
-          </div>
+        <div className="bg-zinc-950 p-6 text-white text-center space-y-3 relative flex flex-col items-center">
+          <BrandLogo size="lg" />
           <h1 className="text-sm font-extrabold uppercase tracking-wider text-white">
             Ingenium Tech Academy
           </h1>

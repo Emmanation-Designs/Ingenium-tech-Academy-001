@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Bell, RefreshCw, Radio } from 'lucide-react';
 import { formatTimeAgo } from '../../services/realtimeSync';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface AdminHeaderProps {
   title: string;
@@ -41,6 +42,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
+          <BrandLogo size="xs" />
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h1>
         </div>
       </div>

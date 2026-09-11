@@ -5,6 +5,7 @@ import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notificat
 import { StudentClassroom } from './student/StudentClassroom';
 import { StudentCourseDashboard } from './student/StudentCourseDashboard';
 import { CourseProgressView } from './student/CourseProgressView';
+import { BrandLogo } from './common/BrandLogo';
 import { 
   Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
   MapPin, Clock, AlertCircle, ChevronRight, Plus, Send, Search,
@@ -140,7 +141,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   theme,
   onToggleTheme,
 }) => {
-  const [activeTab, setActiveTab] = useState<'home' | 'classroom' | 'learning' | 'progress' | 'selections' | 'profile'>('classroom');
+  const [activeTab, setActiveTab] = useState<'home' | 'classroom' | 'learning' | 'progress' | 'selections' | 'profile'>('home');
   const [selectedCourseForDashboard, setSelectedCourseForDashboard] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selections, setSelections] = useState<CourseSelection[]>([]);
@@ -595,20 +596,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <div className="flex-1 flex flex-col bg-white">
             {/* Header branding row */}
             <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5]">
-              <div className="flex items-center gap-2.5">
-                {/* Logo Brand Icon */}
-                <div className="w-8 h-8 rounded-lg bg-[#0A9D8F] flex items-center justify-center text-white text-sm shadow-xs">
-                  <span className="font-bold text-base tracking-tighter">I</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-xs tracking-wider text-[#0A9D8F] leading-tight">
-                    INGENIUM
-                  </span>
-                  <span className="font-semibold text-[8px] tracking-[0.16em] text-zinc-900 leading-none">
-                    TECH ACADEMY
-                  </span>
-                </div>
-              </div>
+              <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
 
               {/* Notification bell */}
               <button 
@@ -831,7 +819,10 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {activeTab === 'selections' && (
           <div className="flex-1 flex flex-col bg-white">
             <div className="px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between">
-              <h1 className="text-base font-semibold text-zinc-900">My Selection</h1>
+              <div className="flex items-center gap-2.5">
+                <BrandLogo size="xs" />
+                <h1 className="text-base font-semibold text-zinc-900">My Selection</h1>
+              </div>
               <button className="p-2 rounded-full hover:bg-zinc-100">
                 <Bell className="w-4 h-4 text-zinc-800" />
               </button>
@@ -949,20 +940,18 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {/* MAIN TAB 3: MY LEARNING */}
         {activeTab === 'learning' && (
           <div className="flex-1 flex flex-col bg-white">
-            <div className="px-6 py-4 border-b border-[#F5F5F5]">
+            <div className="px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between">
               <h1 className="text-base font-semibold text-zinc-900">My Learning</h1>
+              <BrandLogo size="xs" />
             </div>
 
             {/* List of active courses */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {enrollments.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 pt-20">
-                  {/* Graduation cap illustration with soft green circle and sparkles */}
-                  <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-[#E6F5F4]">
-                    <GraduationCap className="w-14 h-14 text-[#087A6F]" />
-                    <Sparkles className="w-4 h-4 text-[#0A9D8F] absolute top-2 right-4 animate-pulse" />
-                    <span className="w-2 h-2 rounded-full bg-[#0A9D8F] absolute bottom-3 left-4"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0A9D8F]/60 absolute top-5 left-5"></span>
+                  {/* Official Ingenium Brand Logo with soft green frame */}
+                  <div className="relative flex items-center justify-center w-28 h-28 rounded-3xl bg-[#E6F5F4] border border-[#0A9D8F]/20 p-4 shadow-xs">
+                    <BrandLogo size={56} />
                   </div>
 
                   <div className="space-y-1.5 max-w-[280px]">

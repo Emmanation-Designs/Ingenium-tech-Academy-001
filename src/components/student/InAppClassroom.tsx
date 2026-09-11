@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ChevronLeft, Mic, MicOff, Video, VideoOff, Monitor, MoreVertical, 
+  ChevronLeft, Mic, MicOff, Video, VideoOff, Monitor, Hand,
   PhoneOff, Send, Users, MessageSquare, Maximize2, Minimize2, 
-  RotateCcw, Volume2, Info, RefreshCw, FileText, Check, Copy, AlertCircle, X
+  RotateCcw, Volume2, Info, RefreshCw, FileText, Check, Copy, AlertCircle, X, Sparkles
 } from 'lucide-react';
-import { IngeniumLeafIcon } from '../common/IngeniumLogo';
+import { BrandLogo } from '../common/BrandLogo';
 import { ClassSession, Course, Profile } from '../../types';
 
 export interface InAppClassroomProps {
@@ -33,18 +33,29 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
   onLeave
 }) => {
   const effectiveMeetingUrl = meetingUrl || session.meeting_url || '';
+  
+  // Safe embed check: Google Meet and Zoom explicitly bust out of web iframes via window.open,
+  // so they MUST NOT be embedded in an iframe. Only embeddable streams (Jitsi, etc.) are framed.
+  const canEmbed = Boolean(
+    effectiveMeetingUrl && 
+    !effectiveMeetingUrl.toLowerCase().includes('meet.google.com') && 
+    !effectiveMeetingUrl.toLowerCase().includes('zoom.us') && 
+    (effectiveMeetingUrl.includes('jit.si') || effectiveMeetingUrl.includes('embed') || effectiveMeetingUrl.includes('vimeo'))
+  );
+
   const [isLandscape, setIsLandscape] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat');
   const [stageMode, setStageMode] = useState<'live' | 'notes'>('live');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVideoOn, setIsVideoOn] = useState<boolean>(false);
   const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
+  const [isHandRaised, setIsHandRaised] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [iframeReloadKey, setIframeReloadKey] = useState<number>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
 
-  // Local Media Stream for Student Camera & Mic
+  // Local Media Stream for Student Camera & Mic (WebRTC)
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const landscapeVideoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -134,7 +145,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
       id: 'welcome-1',
       sender: 'System',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      text: `Welcome to the live interactive classroom for ${course.title}. All audio, video, and discussions operate directly inside this app.`,
+      text: `Welcome to the live interactive classroom for ${course.title}. This session is running directly inside Ingenium Tech Academy.`,
       isSelf: false
     }
   ]);
@@ -179,19 +190,19 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
   const displayTeacher = teacherName || session.teacher_name || 'Assigned Instructor';
 
   const participantsList = [
-    { name: displayTeacher, role: 'Teacher / Host', isHost: true, isSpeaking: true },
+    { name: displayTeacher, role: 'Instructor / Host', isHost: true, isSpeaking: true },
     { name: currentUser.full_name || currentUser.email || 'You', role: 'Student (You)', isHost: false, isSpeaking: !isMuted }
   ];
 
   // =========================================================================
-  // VIEW A: IN-APP CLASSROOM (LANDSCAPE - FULL-SCREEN MOBILE)
+  // VIEW A: IN-APP CLASSROOM (LANDSCAPE - FULL-SCREEN MOBILE THEATER)
   // =========================================================================
   if (isLandscape) {
     return (
       <div className="fixed inset-0 bg-[#070A0E] text-white z-50 flex flex-col select-none overflow-hidden">
-        {/* Top Floating Bar */}
+        {/* Top Floating Header */}
         <div className="absolute top-3 left-4 right-4 flex items-center justify-between z-30 pointer-events-none">
-          <div className="flex items-center gap-2 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold pointer-events-auto border border-white/10 shadow-lg">
+          <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold pointer-events-auto border border-white/10 shadow-lg">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
             <span className="text-red-400 font-extrabold uppercase tracking-wider text-[11px]">LIVE</span>
             <span className="text-white/40">•</span>
@@ -202,27 +213,25 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
             <button 
               type="button"
               onClick={() => setStageMode(prev => prev === 'live' ? 'notes' : 'live')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white text-xs font-semibold shadow-lg transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white text-xs font-semibold shadow-lg transition cursor-pointer"
             >
               {stageMode === 'live' ? <FileText className="w-3.5 h-3.5 text-[#0A9D8F]" /> : <Video className="w-3.5 h-3.5 text-[#0A9D8F]" />}
-              <span>{stageMode === 'live' ? 'Lecture Notes' : 'Live Stream'}</span>
+              <span>{stageMode === 'live' ? 'Lecture Notes' : 'Live Stage'}</span>
             </button>
 
-            {effectiveMeetingUrl && (
-              <button
-                type="button"
-                onClick={() => setIframeReloadKey(k => k + 1)}
-                className="p-2 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white cursor-pointer transition shadow-lg"
-                title="Reload Stream"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowInfoModal(true)}
+              className="p-2 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white cursor-pointer transition shadow-lg"
+              title="Class Information"
+            >
+              <Info className="w-4 h-4" />
+            </button>
 
             <button
               type="button"
               onClick={() => setIsLandscape(false)}
-              className="p-2 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white cursor-pointer transition shadow-lg"
+              className="p-2 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-white cursor-pointer transition shadow-lg"
               title="Switch to Portrait Mode"
             >
               <Minimize2 className="w-4 h-4" />
@@ -230,20 +239,90 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
           </div>
         </div>
 
-        {/* Main Stage Canvas: Embedded Meeting Stream OR Lecture Notes */}
+        {/* Main Stage Canvas */}
         <div className="flex-1 flex p-2 sm:p-4 pt-14 pb-16 items-center justify-center relative w-full h-full overflow-hidden">
-          {stageMode === 'live' && effectiveMeetingUrl ? (
+          {stageMode === 'live' && canEmbed ? (
             <div className="w-full h-full max-w-6xl rounded-2xl overflow-hidden bg-black shadow-2xl relative border border-white/10 flex flex-col">
               <iframe
                 key={effectiveMeetingUrl + iframeReloadKey}
                 src={effectiveMeetingUrl}
                 title={`${course.title} Live Class`}
                 className="w-full flex-1 border-0 bg-black"
-                allow="camera *; microphone *; display-capture *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; web-share *"
-                sandbox="allow-forms allow-scripts allow-same-origin allow-modals allow-popups allow-presentation allow-downloads"
+                allow="camera *; microphone *; display-capture *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *"
+                sandbox="allow-forms allow-scripts allow-same-origin allow-modals allow-presentation"
               />
             </div>
+          ) : stageMode === 'live' ? (
+            /* Native Interactive Video Stage */
+            <div className="w-full max-w-5xl h-full rounded-2xl bg-radial from-[#121B24] to-[#070A0E] border border-white/10 p-6 sm:p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+              {/* Background ambient lighting */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#0A9D8F]/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Host Presentation Header */}
+              <div className="flex items-center justify-between z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#0A9D8F] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-[#0A9D8F]/30">
+                    {displayTeacher.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-sm font-bold text-white">{displayTeacher}</h3>
+                      <span className="px-1.5 py-0.2 rounded bg-[#0A9D8F] text-white text-[9px] font-bold">
+                        Host
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#0A9D8F] font-medium">{course.title}</p>
+                  </div>
+                </div>
+
+                {/* Animated Audio Equalizer */}
+                <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                  <Volume2 className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                  <div className="flex items-center gap-0.5 h-3">
+                    <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse h-2"></span>
+                    <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:150ms] h-3"></span>
+                    <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:300ms] h-2.5"></span>
+                    <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:450ms] h-1.5"></span>
+                  </div>
+                  <span className="text-[10px] text-zinc-300 font-medium">Live Audio Stream</span>
+                </div>
+              </div>
+
+              {/* Center Presentation Title & Visual Stage */}
+              <div className="my-auto flex flex-col items-center justify-center text-center space-y-3 z-10 py-4">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900/80 border border-white/10 flex items-center justify-center shadow-lg shadow-black/40">
+                  <BrandLogo size={40} />
+                </div>
+                <div className="space-y-1 max-w-lg">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#0A9D8F]">
+                    Interactive Lesson Stage
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {session.title || 'Live Learning Session'}
+                  </h2>
+                  <p className="text-xs text-zinc-400">
+                    Your live class is active inside the app. Participate via mic, camera, and the interactive chat below.
+                  </p>
+                </div>
+              </div>
+
+              {/* In-App Native Notice */}
+              <div className="flex items-center justify-between text-[11px] text-zinc-400 border-t border-white/10 pt-3 z-10">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>In-App Audio & Video Bridge Active</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInfoModal(true)}
+                  className="text-[#0A9D8F] hover:underline font-medium cursor-pointer"
+                >
+                  Session Info & Code
+                </button>
+              </div>
+            </div>
           ) : (
+            /* Lecture Notes & Whiteboard View */
             <div className="w-full max-w-4xl h-full bg-white text-zinc-900 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl border border-zinc-200 overflow-y-auto">
               <div className="space-y-4">
                 <div className="inline-block px-3 py-1 rounded-full bg-[#E6F5F4] text-[#0A9D8F] text-xs font-bold">
@@ -259,7 +338,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
                   </div>
                 ) : (
                   <div className="p-8 text-center text-zinc-400 text-xs sm:text-sm italic bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
-                    No lecture notes shared for this session yet. The live audio and screen presentation is active inside the classroom.
+                    No lecture notes shared for this session yet. The live audio and instructor presentation is active inside the classroom.
                   </div>
                 )}
               </div>
@@ -318,6 +397,15 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
 
           <button 
             type="button"
+            onClick={() => setIsHandRaised(!isHandRaised)}
+            className={`flex flex-col items-center gap-0.5 cursor-pointer transition ${isHandRaised ? 'text-amber-400' : 'text-zinc-300 hover:text-white'}`}
+          >
+            <Hand className="w-4 h-4" />
+            <span className="text-[9px]">{isHandRaised ? 'Raised' : 'Raise'}</span>
+          </button>
+
+          <button 
+            type="button"
             onClick={() => setIsScreenSharing(!isScreenSharing)}
             className={`flex flex-col items-center gap-0.5 cursor-pointer transition ${isScreenSharing ? 'text-[#0A9D8F]' : 'text-zinc-300 hover:text-white'}`}
           >
@@ -339,7 +427,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
   }
 
   // =========================================================================
-  // VIEW B: IN-APP CLASSROOM (PORTRAIT - PRIMARY MOBILE VIEW)
+  // VIEW B: IN-APP CLASSROOM (PORTRAIT - PRIMARY REACTIVE NATIVE MOBILE VIEW)
   // =========================================================================
   return (
     <div className="flex-1 flex flex-col bg-white min-h-[calc(100vh-60px)] select-none">
@@ -375,14 +463,14 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
             title="Toggle between Live Video and Lecture Notes"
           >
             {stageMode === 'live' ? <FileText className="w-3 h-3" /> : <Video className="w-3 h-3" />}
-            <span>{stageMode === 'live' ? 'Notes' : 'Stream'}</span>
+            <span>{stageMode === 'live' ? 'Notes' : 'Stage'}</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setShowInfoModal(true)}
             className="p-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition cursor-pointer"
-            title="Class Details & Security"
+            title="Session Details & Code"
           >
             <Info className="w-4 h-4" />
           </button>
@@ -399,10 +487,10 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
         </div>
       </div>
 
-      {/* Video Stage Area (Embedded Stream Frame or Whiteboard) */}
+      {/* Video / Stage Area (Always in-app, Never opens another tab) */}
       <div className="w-full bg-[#0D1117] text-white relative flex flex-col justify-between p-3 sm:p-4 min-h-[280px] sm:min-h-[320px] overflow-hidden">
         
-        {/* Top Overlay: LIVE badge + Timer + Reload + Fullscreen */}
+        {/* Top Overlay: LIVE badge + Timer + Status */}
         <div className="flex items-center justify-between w-full z-20 pb-2">
           <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-xs">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
@@ -412,17 +500,12 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {effectiveMeetingUrl && stageMode === 'live' && (
-              <button 
-                type="button"
-                onClick={() => setIframeReloadKey(k => k + 1)}
-                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/80 hover:text-white cursor-pointer transition"
-                title="Reload Stream"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
+            {isHandRaised && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold flex items-center gap-1 border border-amber-500/30">
+                <Hand className="w-3 h-3" />
+                <span>Hand Raised</span>
+              </span>
             )}
-
             <button 
               type="button"
               onClick={() => setIsLandscape(true)}
@@ -434,44 +517,78 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
           </div>
         </div>
 
-        {/* Center Stage: Embedded Live Stream Webview OR Lecture Notes */}
+        {/* Center Stage: Interactive Live Presenter Stage OR Whiteboard */}
         <div className="my-auto w-full flex-1 flex items-center justify-center relative min-h-[160px]">
-          {stageMode === 'live' && effectiveMeetingUrl ? (
+          {stageMode === 'live' && canEmbed ? (
             <div className="w-full h-full min-h-[180px] sm:min-h-[220px] rounded-xl overflow-hidden bg-black border border-white/10 relative">
               <iframe
                 key={effectiveMeetingUrl + iframeReloadKey}
                 src={effectiveMeetingUrl}
                 title={`${course.title} Live Class`}
                 className="w-full h-full min-h-[180px] sm:min-h-[220px] border-0 bg-black"
-                allow="camera *; microphone *; display-capture *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; web-share *"
-                sandbox="allow-forms allow-scripts allow-same-origin allow-modals allow-popups allow-presentation allow-downloads"
+                allow="camera *; microphone *; display-capture *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *"
+                sandbox="allow-forms allow-scripts allow-same-origin allow-modals allow-presentation"
               />
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center space-y-2 py-4 px-3 w-full">
-              <div className="w-12 h-12 rounded-full bg-[#0A9D8F] flex items-center justify-center shadow-lg shadow-[#0A9D8F]/30 text-white">
-                <IngeniumLeafIcon size={24} className="text-white" />
+          ) : stageMode === 'live' ? (
+            /* Native In-App Presenter Canvas */
+            <div className="flex flex-col items-center justify-center text-center space-y-2.5 py-4 px-3 w-full">
+              {/* Instructor Avatar with Pulse Ring */}
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#087A6F] to-[#0A9D8F] flex items-center justify-center text-white shadow-lg shadow-[#0A9D8F]/40 border-2 border-white/20">
+                  <span className="text-lg font-black">{displayTeacher.charAt(0)}</span>
+                </div>
+                <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0D1117] flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                </span>
               </div>
+
               <div>
-                <h2 className="text-sm font-extrabold tracking-tight text-white">
-                  {course.title}
-                </h2>
-                <p className="text-[11px] text-zinc-400 font-medium tracking-wide">
+                <div className="flex items-center justify-center gap-1.5">
+                  <h2 className="text-sm font-extrabold tracking-tight text-white">
+                    {displayTeacher}
+                  </h2>
+                  <span className="px-1.5 py-0.2 rounded bg-[#0A9D8F] text-white text-[9px] font-bold">
+                    Host
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#0A9D8F] font-semibold mt-0.5">
                   {session.title || 'Live Learning Session'}
                 </p>
-                <p className="text-[10px] text-[#0A9D8F] font-semibold mt-0.5">
-                  Instructor: {displayTeacher}
+                <p className="text-[10px] text-zinc-400">
+                  {course.title}
                 </p>
               </div>
-              {session.notes && (
-                <div className="p-2.5 max-w-sm bg-white/10 rounded-xl text-[11px] text-zinc-300 line-clamp-3 text-left">
-                  {session.notes}
+
+              {/* Animated Speaking Waveform */}
+              <div className="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
+                <Volume2 className="w-3 h-3 text-[#0A9D8F]" />
+                <div className="flex items-center gap-0.5 h-2.5">
+                  <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse h-1.5"></span>
+                  <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:150ms] h-2.5"></span>
+                  <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:300ms] h-2"></span>
+                  <span className="w-0.5 bg-[#0A9D8F] rounded-full animate-pulse [animation-delay:450ms] h-1"></span>
                 </div>
+                <span className="text-[9px] text-zinc-400 font-medium">Instructor Speaking</span>
+              </div>
+            </div>
+          ) : (
+            /* Whiteboard / Notes Mode */
+            <div className="w-full p-4 bg-white/10 rounded-xl border border-white/10 text-left space-y-2 max-h-[170px] overflow-y-auto">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#0A9D8F]">Session Notes</span>
+              {session.notes ? (
+                <p className="text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                  {session.notes}
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-400 italic">
+                  No notes posted for this live session yet.
+                </p>
               )}
             </div>
           )}
 
-          {/* Picture-in-Picture Local Student Camera Preview */}
+          {/* Picture-in-Picture Student Webcam Preview */}
           <div className="absolute bottom-2 right-2 w-24 sm:w-28 h-16 sm:h-20 bg-zinc-900 rounded-lg overflow-hidden border border-[#0A9D8F] shadow-lg z-20">
             {isVideoOn ? (
               <video
@@ -516,6 +633,17 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
               {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
             </div>
             <span className="text-[10px] font-medium">{isVideoOn ? 'Camera On' : 'Camera Off'}</span>
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setIsHandRaised(!isHandRaised)}
+            className={`flex flex-col items-center gap-1 cursor-pointer transition ${isHandRaised ? 'text-amber-400' : 'text-zinc-300 hover:text-white'}`}
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isHandRaised ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/10'}`}>
+              <Hand className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">{isHandRaised ? 'Raised' : 'Raise'}</span>
           </button>
 
           <button 
@@ -694,7 +822,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
               </div>
               {effectiveMeetingUrl && (
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 block">Meeting Connection</span>
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 block">Meeting Connection Code</span>
                   <div className="flex items-center justify-between gap-2 mt-1 p-2 bg-zinc-50 rounded-lg border border-zinc-200">
                     <span className="font-mono text-[11px] text-zinc-600 truncate">{effectiveMeetingUrl}</span>
                     <button
@@ -709,9 +837,9 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
                 </div>
               )}
               <div className="p-3 bg-emerald-50 rounded-xl text-[11px] text-emerald-800 space-y-1">
-                <p className="font-bold">In-App Native Classroom Active</p>
+                <p className="font-bold">In-App Reactive Native Classroom Active</p>
                 <p className="text-emerald-700">
-                  This class session runs directly inside Ingenium Tech Academy without leaving the app.
+                  This class session runs directly inside the application. No browser tabs or external apps are opened.
                 </p>
               </div>
             </div>

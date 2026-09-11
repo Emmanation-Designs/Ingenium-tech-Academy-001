@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { Profile } from '../types';
 import { Mail, Lock, User, Globe, ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { BrandLogo } from './common/BrandLogo';
 
 interface AuthProps {
   onSuccess: (user: Profile) => void;
@@ -116,10 +117,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
         </button>
 
         {/* Logo and Brand Header */}
-        <div className="text-center mt-12 mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-zinc-950 border border-zinc-800 mb-3 shadow-lg">
-            <span className="text-[#0A9D8F] font-extrabold text-xl">I</span>
-          </div>
+        <div className="text-center mt-10 mb-8 flex flex-col items-center">
+          <BrandLogo size="lg" className="mb-3" />
           <h1 className="text-xl font-black tracking-tight text-white">
             Ingenium Tech Academy
           </h1>

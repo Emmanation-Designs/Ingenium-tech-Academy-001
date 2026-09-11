@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, BookOpen, Clock, Calendar, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { BrandLogo } from './common/BrandLogo';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -62,6 +63,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       {/* Sleek Onboarding Card Frame */}
       <div className="w-full max-w-[400px] bg-[#0A9D8F] border border-emerald-500/20 flex flex-col justify-between min-h-[640px] rounded-[32px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
         
+        {/* Official Brand Logo Header */}
+        <div className="flex items-center justify-center pt-1 pb-2">
+          <BrandLogo size="md" showText={true} showSubtitle={true} variant="light" />
+        </div>
+
         {/* Dynamic Step Content */}
         <div className="flex-1 flex flex-col justify-center my-8 text-center px-2">
           {/* Centered Book Icon */}

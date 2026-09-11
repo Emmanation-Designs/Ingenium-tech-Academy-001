@@ -11,6 +11,7 @@ import {
   Clock, AlertCircle, Trash2, Edit3, Upload, ExternalLink, 
   Check, Play, Eye, Award, X, Sparkles, HelpCircle, Save, Download
 } from 'lucide-react';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface TeacherCourseWorkspaceProps {
   course: Course;
@@ -456,6 +457,7 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
+            <BrandLogo size="xs" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] text-[10px] font-bold uppercase tracking-wider">

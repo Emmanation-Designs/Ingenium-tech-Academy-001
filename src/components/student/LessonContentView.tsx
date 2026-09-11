@@ -4,6 +4,7 @@ import {
   HelpCircle, ChevronDown, ChevronUp, AlertCircle, ArrowRight
 } from 'lucide-react';
 import { Course, CourseModule, CourseLesson, LessonMaterial, Quiz } from '../../types';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface LessonContentViewProps {
   course: Course;
@@ -72,6 +73,7 @@ export const LessonContentView: React.FC<LessonContentViewProps> = ({
             </p>
           </div>
         </div>
+        <BrandLogo size="xs" />
       </div>
 
       <div className="p-5 space-y-6 max-w-xl mx-auto w-full">

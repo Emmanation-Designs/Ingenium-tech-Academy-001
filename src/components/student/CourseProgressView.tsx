@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Course, CourseLesson, Profile, StudentLessonProgress } from '../../types';
 import { learningService } from '../../services/learningService';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface CourseProgressViewProps {
   currentUser: Profile;
@@ -174,6 +175,7 @@ export const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             <p className="text-xs text-zinc-400">Real-time learning stats & milestones</p>
           </div>
         </div>
+        <BrandLogo size="xs" />
       </div>
 
       {loading ? (

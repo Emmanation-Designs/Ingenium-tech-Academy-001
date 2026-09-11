@@ -8,6 +8,7 @@ import { TeacherInviteAccept } from './components/teacher/TeacherInviteAccept';
 import { dataService } from './services/dataService';
 import { Profile, UserRole } from './types';
 import { Loader2 } from 'lucide-react';
+import { BrandLogo } from './components/common/BrandLogo';
 
 const getInviteTokenFromUrl = (): string | null => {
   try {
@@ -151,8 +152,8 @@ export default function App() {
   // Loading Screen
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen dot-grid text-white font-sans">
-        <Loader2 className="w-8 h-8 text-[#0A9D8F] animate-spin mb-3" />
+      <div className="flex flex-col items-center justify-center min-h-screen dot-grid text-white font-sans space-y-4">
+        <BrandLogo size="lg" className="animate-pulse" />
         <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-zinc-400">
           Ingenium Tech Academy
         </span>

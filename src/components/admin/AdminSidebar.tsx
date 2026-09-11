@@ -5,6 +5,7 @@ import {
   LogOut, X, ChevronDown, Check
 } from 'lucide-react';
 import { Profile } from '../../types';
+import { BrandLogo } from '../common/BrandLogo';
 
 export type AdminTab = 
   | 'dashboard' 
@@ -74,11 +75,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Drawer Header with Ingenium Logo */}
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#0A9D8F] flex items-center justify-center shadow-xs">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <BrandLogo size="md" />
             <div>
               <span className="font-extrabold text-sm tracking-tight text-gray-950 block leading-tight">
                 INGENIUM TECH

@@ -11,6 +11,7 @@ import {
   Play, Download, ExternalLink, Award, Check, AlertCircle, 
   ChevronRight, ArrowRight, ArrowLeft, Video, HelpCircle, X 
 } from 'lucide-react';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface StudentCourseDashboardProps {
   course: Course;
@@ -240,6 +241,7 @@ export const StudentCourseDashboard: React.FC<StudentCourseDashboardProps> = ({
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
+            <BrandLogo size="xs" />
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A9D8F]">
                 {course.category || 'Approved Course'}

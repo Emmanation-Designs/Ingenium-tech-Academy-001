@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Quiz, QuizQuestion, QuizAttempt, Profile } from '../../types';
 import { learningService } from '../../services/learningService';
+import { BrandLogo } from '../common/BrandLogo';
 
 interface QuizStudentViewProps {
   quiz: Quiz;
@@ -260,8 +261,11 @@ export const QuizStudentView: React.FC<QuizStudentViewProps> = ({
           </div>
         </div>
 
-        <div className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 font-mono text-xs font-semibold">
-          {currentQuestionIndex + 1} of {questions.length}
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 font-mono text-xs font-semibold">
+            {currentQuestionIndex + 1} of {questions.length}
+          </div>
+          <BrandLogo size="xs" />
         </div>
       </div>
 

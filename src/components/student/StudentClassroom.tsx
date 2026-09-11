@@ -3,7 +3,7 @@ import { Course, CourseSchedule, ClassSession, Profile, CourseLesson, CourseModu
 import { learningService } from '../../services/learningService';
 import { dataService } from '../../services/dataService';
 import { realtimeSync } from '../../services/realtimeSync';
-import { IngeniumLogo, IngeniumLeafIcon } from '../common/IngeniumLogo';
+import { BrandLogo } from '../common/BrandLogo';
 import { InAppClassroom } from './InAppClassroom';
 import { ClassRecordingView } from './ClassRecordingView';
 import { LessonContentView } from './LessonContentView';
@@ -406,9 +406,9 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-white min-h-[calc(100vh-60px)]">
       
-      {/* Top Header with Sprout Logo */}
+      {/* Top Header with Brand Logo */}
       <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20">
-        <IngeniumLogo showSubtitle={false} size="sm" />
+        <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
         <button className="p-2 rounded-full hover:bg-zinc-100 transition relative">
           <Bell className="w-4 h-4 text-zinc-800" />
         </button>
@@ -432,8 +432,8 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
       ) : approvedCourses.length === 0 ? (
         /* GENUINE EMPTY STATE: Student has no active courses yet */
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-sm mx-auto my-auto">
-          <div className="w-20 h-20 rounded-full bg-[#E6F5F4] flex items-center justify-center text-[#0A9D8F] shadow-inner">
-            <IngeniumLeafIcon size={40} className="text-[#0A9D8F]" />
+          <div className="w-20 h-20 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-xs">
+            <BrandLogo size={48} />
           </div>
           <div className="space-y-1">
             <h2 className="text-base font-bold text-zinc-900">

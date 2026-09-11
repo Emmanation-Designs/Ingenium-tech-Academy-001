@@ -1,6 +1,6 @@
 {
   "name": "Ingenium Tech Academy",
-  "description": "Premium mobile-first learning management application and administrative operations center for ingeniumtechacademy.com.",
+  "description": "Ingenium Tech Academy is a live online learning platform.",
   "requestFramePermissions": [
     "camera",
     "microphone"
