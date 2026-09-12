@@ -28,6 +28,29 @@ html, body, #root {
   .bento-card:hover {
     border-color: #3f3f46;
   }
+
+  /* Safe Area Inset Utilities (for notch, dynamic island, and home-indicator protection) */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Clean horizontal scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* High-contrast Sophisticated Light Theme Overrides */

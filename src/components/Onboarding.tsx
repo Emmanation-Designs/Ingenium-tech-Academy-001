@@ -59,9 +59,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const activeStep = steps[currentStep];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 px-6 py-12 select-none font-sans">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 p-4 sm:p-6 md:p-8 select-none font-sans overflow-y-auto pt-safe pb-safe">
       {/* Sleek Onboarding Card Frame */}
-      <div className="w-full max-w-[400px] bg-[#0A9D8F] border border-emerald-500/20 flex flex-col justify-between min-h-[640px] rounded-[32px] p-7 shadow-2xl relative overflow-hidden transition-all duration-300">
+      <div className="w-full max-w-sm sm:max-w-md bg-[#0A9D8F] border border-emerald-500/20 flex flex-col justify-between min-h-[500px] sm:min-h-[580px] rounded-3xl sm:rounded-[32px] p-5 sm:p-7 shadow-2xl relative transition-all duration-300 my-auto">
         
         {/* Official Brand Logo Header */}
         <div className="flex items-center justify-center pt-1 pb-2">
@@ -69,27 +69,27 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         </div>
 
         {/* Dynamic Step Content */}
-        <div className="flex-1 flex flex-col justify-center my-8 text-center px-2">
+        <div className="flex-1 flex flex-col justify-center my-4 sm:my-6 text-center px-1 sm:px-2">
           {/* Centered Book Icon */}
-          <div className="flex justify-center mb-10 transform hover:scale-105 transition-transform duration-300">
-            <div className="w-32 h-32 flex items-center justify-center">
+          <div className="flex justify-center mb-4 sm:mb-8 transform hover:scale-105 transition-transform duration-300">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
               {activeStep.icon}
             </div>
           </div>
 
           {/* Heading */}
-          <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tight mb-4 min-h-[80px] flex items-center justify-center px-4">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight mb-2 sm:mb-4 min-h-[56px] sm:min-h-[72px] flex items-center justify-center px-2">
             {activeStep.title}
           </h2>
 
           {/* Description */}
-          <p className="text-white/85 text-xs font-medium leading-relaxed max-w-[290px] mx-auto mb-6">
+          <p className="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-[320px] mx-auto mb-2 sm:mb-4">
             {activeStep.description}
           </p>
         </div>
 
         {/* Footer Navigation & Indicators */}
-        <div className="mt-auto flex flex-col gap-8">
+        <div className="mt-auto flex flex-col gap-4 sm:gap-6">
           {/* Slider Indicators */}
           <div className="flex justify-center gap-1.5">
             {steps.map((_, idx) => (
@@ -105,11 +105,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           </div>
 
           {/* CTAs */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
             {currentStep > 0 ? (
               <button
                 onClick={handlePrev}
-                className="py-3.5 px-5 text-xs font-black text-white/80 hover:text-white transition-colors cursor-pointer"
+                className="py-3 px-4 sm:py-3.5 sm:px-5 min-h-[44px] text-xs font-black text-white/80 hover:text-white transition-colors cursor-pointer"
               >
                 Back
               </button>
@@ -119,7 +119,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             <button
               onClick={handleNext}
-              className="flex-1 py-3.5 px-6 rounded-full bg-white hover:bg-zinc-100 text-[#0A9D8F] font-black text-sm shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 py-3 px-5 sm:py-3.5 sm:px-6 min-h-[44px] rounded-full bg-white hover:bg-zinc-100 text-[#0A9D8F] font-black text-xs sm:text-sm shadow-md active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               {currentStep === steps.length - 1 ? (
                 <span>Get started</span>
@@ -134,7 +134,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             <button
               type="button"
               onClick={onComplete}
-              className="text-xs font-semibold text-white/90 hover:text-white underline underline-offset-4 cursor-pointer transition-colors"
+              className="text-xs font-semibold text-white/95 hover:text-white underline underline-offset-4 cursor-pointer transition-colors min-h-[36px] inline-flex items-center"
             >
               Already have an account? Sign In
             </button>

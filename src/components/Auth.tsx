@@ -96,8 +96,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen dot-grid text-white px-4 py-8 font-sans">
-      <div className="w-full max-w-[420px] bg-zinc-900 border border-zinc-800 rounded-[32px] p-6 shadow-2xl relative transition-all duration-300">
+    <div className="flex items-center justify-center min-h-screen dot-grid text-white p-4 sm:p-6 md:p-8 font-sans overflow-y-auto pt-safe pb-safe">
+      <div className="w-full max-w-sm sm:max-w-[440px] bg-zinc-900 border border-zinc-800 rounded-3xl sm:rounded-[32px] p-5 sm:p-7 shadow-2xl relative transition-all duration-300 my-auto">
         
         {/* Back navigation */}
         <button
@@ -110,16 +110,16 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
               onBackToOnboarding();
             }
           }}
-          className="absolute top-6 left-6 p-2 rounded-full border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-white active:translate-y-0.5 transition-all cursor-pointer"
+          className="absolute top-5 left-5 sm:top-6 sm:left-6 p-2 rounded-full border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-white active:translate-y-0.5 transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
           aria-label="Go back"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
         {/* Logo and Brand Header */}
-        <div className="text-center mt-10 mb-8 flex flex-col items-center">
+        <div className="text-center mt-8 sm:mt-10 mb-6 sm:mb-8 flex flex-col items-center">
           <BrandLogo size="lg" className="mb-3" />
-          <h1 className="text-xl font-black tracking-tight text-white">
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
             Ingenium Tech Academy
           </h1>
           <p className="text-xs font-semibold text-zinc-400 mt-1 uppercase tracking-widest">
