@@ -4,7 +4,7 @@ import { learningService } from '../../services/learningService';
 import { dataService } from '../../services/dataService';
 import { realtimeSync } from '../../services/realtimeSync';
 import { BrandLogo } from '../common/BrandLogo';
-import { InAppClassroom } from './InAppClassroom';
+import { navigateSameTab } from '../../lib/navigation';
 import { ClassRecordingView } from './ClassRecordingView';
 import { LessonContentView } from './LessonContentView';
 import { QuizStudentView } from './QuizStudentView';
@@ -63,15 +63,8 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
 
   // Sub-view drilldown state (driven by real database records)
   const [activeSubView, setActiveSubView] = useState<
-    'main' | 'in-app' | 'recordings' | 'lesson' | 'quiz' | 'progress'
+    'main' | 'recordings' | 'lesson' | 'quiz' | 'progress'
   >('main');
-
-  const [inAppTargetSession, setInAppTargetSession] = useState<{
-    session: ClassSession;
-    course: Course;
-    teacherName?: string;
-    meetingUrl?: string;
-  } | null>(null);
 
   const [selectedCourseForSubView, setSelectedCourseForSubView] = useState<Course | null>(null);
   const [selectedLessonForSubView, setSelectedLessonForSubView] = useState<CourseLesson | null>(null);
@@ -317,34 +310,6 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
   // =========================================================================
   // SUB-VIEWS ROUTING (When student enters a lesson, recording, or quiz)
   // =========================================================================
-  if (activeSubView === 'in-app' && (inAppTargetSession || activeLiveSession)) {
-    const target = inAppTargetSession || (activeLiveSession ? {
-      session: {
-        ...activeLiveSession.session,
-        meeting_url: activeLiveSession.meetingUrl || activeLiveSession.session.meeting_url
-      },
-      course: activeLiveSession.course,
-      teacherName: activeLiveSession.teacherName,
-      meetingUrl: activeLiveSession.meetingUrl || activeLiveSession.session.meeting_url
-    } : null);
-
-    if (target) {
-      return (
-        <InAppClassroom
-          session={target.session}
-          meetingUrl={target.meetingUrl}
-          course={target.course}
-          teacherName={target.teacherName}
-          currentUser={currentUser}
-          onLeave={() => {
-            setInAppTargetSession(null);
-            setActiveSubView('main');
-          }}
-        />
-      );
-    }
-  }
-
   if (activeSubView === 'recordings' && selectedCourseForSubView) {
     return (
       <ClassRecordingView
@@ -470,14 +435,26 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
                 </p>
               </div>
 
-              {/* Enter Classroom Action */}
-              <button
-                onClick={() => setActiveSubView('in-app')}
-                className="w-full py-3.5 rounded-xl bg-white text-[#0A9D8F] hover:bg-emerald-50 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
-              >
-                <Video className="w-4 h-4" />
-                <span>Enter Classroom</span>
-              </button>
+              {/* Join Meeting Action */}
+              {activeLiveSession.meetingUrl ? (
+                <a
+                  href={activeLiveSession.meetingUrl}
+                  target="_top"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateSameTab(activeLiveSession.meetingUrl);
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-white text-[#0A9D8F] hover:bg-emerald-50 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Join Live Class (Google Meet)</span>
+                </a>
+              ) : (
+                <div className="w-full py-3.5 rounded-xl bg-white/20 text-white text-xs font-bold flex items-center justify-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>Instructor will post link shortly</span>
+                </div>
+              )}
 
               {/* Class Information Card */}
               <div className="p-4 bg-white/10 rounded-xl space-y-3 text-xs border border-white/10 backdrop-blur-xs">
@@ -489,7 +466,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
                 {activeLiveSession.meetingUrl ? (
                   <div className="space-y-1.5 pt-1 border-t border-white/10">
                     <div className="flex items-center justify-between">
-                      <span className="text-emerald-100 font-medium">Live Meeting URL</span>
+                      <span className="text-emerald-100 font-medium">Meeting URL</span>
                       <button
                         onClick={() => copyToClipboard(activeLiveSession.meetingUrl)}
                         className="text-emerald-200 hover:text-white flex items-center gap-1 font-semibold cursor-pointer"
@@ -498,24 +475,28 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
                         <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSubView('in-app')}
+                    <a
+                      href={activeLiveSession.meetingUrl}
+                      target="_top"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigateSameTab(activeLiveSession.meetingUrl);
+                      }}
                       className="text-white underline truncate block font-mono text-[11px] text-left hover:text-emerald-100 transition cursor-pointer"
-                      title="Open Live Classroom In-App"
+                      title="Open Live Meeting in Same Tab"
                     >
                       {activeLiveSession.meetingUrl}
-                    </button>
+                    </a>
                   </div>
                 ) : (
                   <div className="pt-1 border-t border-white/10 text-[11px] text-emerald-100 italic">
-                    Meeting URL managed within in-app classroom.
+                    Class link unlocks automatically around class time.
                   </div>
                 )}
 
                 <div className="pt-2 border-t border-white/10 flex items-start gap-2 text-[11px] text-emerald-100/80">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>You can join 15 minutes before the start time and up to 30 minutes after the class ends.</span>
+                  <span>Links open directly in your video app (e.g. Google Meet). You can join 15 minutes before start.</span>
                 </div>
               </div>
             </div>
@@ -562,21 +543,25 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
                   <BookOpen className="w-3.5 h-3.5" />
                   <span>View Lessons</span>
                 </button>
-                <button
-                  onClick={() => {
-                    setInAppTargetSession({
-                      session: activeUpcomingSession.session,
-                      course: activeUpcomingSession.course,
-                      teacherName: activeUpcomingSession.teacherName,
-                      meetingUrl: activeUpcomingSession.session.meeting_url
-                    });
-                    setActiveSubView('in-app');
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                >
-                  <Video className="w-3.5 h-3.5" />
-                  <span>Enter Classroom</span>
-                </button>
+                {activeUpcomingSession.session.meeting_url ? (
+                  <a
+                    href={activeUpcomingSession.session.meeting_url}
+                    target="_top"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateSameTab(activeUpcomingSession.session.meeting_url!);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Join Meeting</span>
+                  </a>
+                ) : (
+                  <div className="flex-1 py-2.5 rounded-xl bg-zinc-100 text-zinc-400 text-xs font-semibold flex items-center justify-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Link Unlocks Soon</span>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -707,36 +692,19 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
                     {sched.meeting_url && (
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <span className="text-[11px] text-[#0A9D8F] truncate font-mono">{sched.meeting_url}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        <a
+                          href={sched.meeting_url}
+                          target="_top"
+                          onClick={(e) => {
+                            e.preventDefault();
                             setShowScheduleModal(false);
-                            const course = approvedCourses.find(c => c.id === sched.course_id) || approvedCourses[0];
-                            if (course) {
-                              setInAppTargetSession({
-                                session: {
-                                  id: `sched-${sched.id}`,
-                                  course_id: course.id,
-                                  schedule_id: sched.id,
-                                  title: sched.label || 'Scheduled Live Session',
-                                  start_time: new Date().toISOString(),
-                                  end_time: new Date(Date.now() + 3600000).toISOString(),
-                                  status: 'in_progress',
-                                  meeting_url: sched.meeting_url,
-                                  created_at: new Date().toISOString()
-                                },
-                                course,
-                                teacherName: 'Assigned Instructor',
-                                meetingUrl: sched.meeting_url
-                              });
-                              setActiveSubView('in-app');
-                            }
+                            navigateSameTab(sched.meeting_url!);
                           }}
                           className="shrink-0 px-2.5 py-1 rounded-lg bg-[#E6F5F4] hover:bg-[#0A9D8F] text-[#0A9D8F] hover:text-white text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
                         >
                           <Video className="w-3 h-3" />
-                          <span>Join In-App</span>
-                        </button>
+                          <span>Join Meeting</span>
+                        </a>
                       </div>
                     )}
                   </div>

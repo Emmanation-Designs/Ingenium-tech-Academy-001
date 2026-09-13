@@ -257,7 +257,7 @@ export const StudentCourseDashboard: React.FC<StudentCourseDashboardProps> = ({
               className="px-4 py-2 rounded-xl bg-[#E6F5F4] text-[#0A9D8F] hover:bg-[#0A9D8F] hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Video className="w-3.5 h-3.5" />
-              <span>Enter Classroom</span>
+              <span>Go to Classroom</span>
             </button>
             <button
               onClick={handleContinueLearning}

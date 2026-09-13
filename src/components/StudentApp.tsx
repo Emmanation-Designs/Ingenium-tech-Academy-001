@@ -6,11 +6,13 @@ import { StudentClassroom } from './student/StudentClassroom';
 import { StudentCourseDashboard } from './student/StudentCourseDashboard';
 import { CourseProgressView } from './student/CourseProgressView';
 import { BrandLogo } from './common/BrandLogo';
+import { navigateSameTab } from '../lib/navigation';
 import { 
   Home as HomeIcon, Heart, BookOpen, GraduationCap, User, Bell, LogOut, CheckCircle, 
   MapPin, Clock, AlertCircle, ChevronRight, Plus, Send, Search,
   SlidersHorizontal, Trash2, Camera, HelpCircle, Info, Settings, Globe, Lock, ChevronLeft,
-  Check, BarChart2, Video, Pencil, Sparkles, X, Database, Palette, Megaphone, Code, Terminal, PenTool
+  Check, BarChart2, Video, Pencil, Sparkles, X, Database, Palette, Megaphone, Code, Terminal, PenTool,
+  ExternalLink
 } from 'lucide-react';
 
 const getCourseImage = (course: Course) => {
@@ -92,23 +94,27 @@ const StudentClassMeetingLink: React.FC<{ scheduleId?: string; onOpenClassroom?:
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0A9D8F]">
             <Video className="w-3.5 h-3.5" />
-            <span>Live Classroom Active</span>
+            <span>Live Class Active</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0A9D8F] text-white">
             Ready to Join
           </span>
         </div>
         <p className="text-[11px] text-zinc-600 leading-relaxed">
-          Your class session is currently active. Tap below to enter the live classroom directly inside the app.
+          Your live class session is currently ongoing. Click below to join directly via Google Meet.
         </p>
-        <button
-          type="button"
-          onClick={onOpenClassroom}
+        <a
+          href={meetingData.meeting_url}
+          target="_top"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateSameTab(meetingData.meeting_url!);
+          }}
           className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs cursor-pointer"
         >
           <Video className="w-3.5 h-3.5" />
-          <span>Enter Live Classroom</span>
-        </button>
+          <span>Join Live Class (Google Meet)</span>
+        </a>
       </div>
     );
   }

@@ -12,6 +12,7 @@ import {
   Check, Play, Eye, Award, X, Sparkles, HelpCircle, Save, Download
 } from 'lucide-react';
 import { BrandLogo } from '../common/BrandLogo';
+import { navigateSameTab } from '../../lib/navigation';
 
 interface TeacherCourseWorkspaceProps {
   course: Course;
@@ -803,9 +804,12 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
                           {s.meeting_url && (
                             <a
                               href={s.meeting_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-3 py-1.5 rounded-lg bg-[#E6F5F4] text-[#0A9D8F] hover:bg-[#0A9D8F] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition"
+                              target="_top"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigateSameTab(s.meeting_url!);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-[#E6F5F4] text-[#0A9D8F] hover:bg-[#0A9D8F] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                             >
                               <Video className="w-3.5 h-3.5" />
                               <span>Open Meet</span>

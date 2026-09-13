@@ -9,6 +9,7 @@ import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { TeacherCourseWorkspace } from './teacher/TeacherCourseWorkspace';
 import { BrandLogo } from './common/BrandLogo';
+import { navigateSameTab } from '../lib/navigation';
 
 interface TeacherAppProps {
   currentUser: Profile;
@@ -571,12 +572,14 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               <div className="flex items-center justify-between text-xs text-gray-900">
                                 <a 
                                   href={item.meetingUrl} 
-                                  target="_blank" 
-                                  rel="noreferrer" 
+                                  target="_top"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    navigateSameTab(item.meetingUrl!);
+                                  }}
                                   className="text-[#0A9D8F] font-mono hover:underline flex items-center gap-1 truncate max-w-[200px]"
                                 >
                                   <span>{item.meetingUrl}</span>
-                                  <ExternalLink className="w-3 h-3 shrink-0" />
                                 </a>
                                 <button
                                   type="button"
