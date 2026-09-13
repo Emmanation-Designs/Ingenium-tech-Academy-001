@@ -447,34 +447,34 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-white min-h-screen">
       {/* Top Header */}
-      <div className="border-b border-[#EAEAEA] bg-white px-6 py-4 sticky top-0 z-20">
+      <div className="border-b border-[#EAEAEA] bg-white px-4 sm:px-6 py-4 sticky top-0 z-20 pt-safe">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={onBack}
-              className="p-2 -ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition cursor-pointer"
+              className="p-2 -ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition cursor-pointer shrink-0"
               title="Return to assigned courses"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <BrandLogo size="xs" />
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] text-[10px] font-bold uppercase tracking-wider">
+                <span className="px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] text-[10px] font-bold uppercase tracking-wider shrink-0">
                   Teaching Workspace
                 </span>
                 {scheduleLabel && (
-                  <span className="text-xs text-zinc-500 font-medium">
+                  <span className="text-xs text-zinc-500 font-medium truncate">
                     • {scheduleLabel}
                   </span>
                 )}
               </div>
-              <h1 className="text-lg font-bold text-zinc-900 mt-0.5">{course.title}</h1>
+              <h1 className="text-lg font-bold text-zinc-900 mt-0.5 truncate">{course.title}</h1>
             </div>
           </div>
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200">
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 overflow-x-auto no-scrollbar shrink-0">
             <button
               onClick={() => setActiveTab('curriculum')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
@@ -525,7 +525,7 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
       )}
 
       {/* Main Workspace Body */}
-      <div className="flex-1 p-6 max-w-6xl w-full mx-auto">
+      <div className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto pb-safe">
         {loading ? (
           <div className="p-12 text-center text-xs text-zinc-400">Loading course curriculum...</div>
         ) : (

@@ -142,7 +142,7 @@ export const AdminRequests: React.FC<AdminRequestsProps> = ({
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 space-y-0">
           {filtered.map(req => {
             const dateStr = new Date(req.created_at).toLocaleDateString('en-US', {
               month: 'short',
@@ -235,7 +235,7 @@ export const AdminRequests: React.FC<AdminRequestsProps> = ({
       {/* Review Request Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 border border-gray-100 shadow-2xl space-y-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 border border-gray-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-gray-950">Review Course Request</h3>

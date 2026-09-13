@@ -16,7 +16,7 @@ export const AdminBottomNav: React.FC<AdminBottomNavProps> = ({
   pendingRequestsCount
 }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 px-3 py-2 flex items-center justify-around shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 px-3 py-2 pb-safe flex items-center justify-around shadow-lg">
       <button
         onClick={() => onSelectTab('dashboard')}
         className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${

@@ -73,7 +73,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         }`}
       >
         {/* Drawer Header with Ingenium Logo */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-5 pt-safe border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BrandLogo size="md" />
             <div>
@@ -145,7 +145,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </nav>
 
         {/* Bottom Logout */}
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 pb-safe border-t border-gray-100">
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-gray-600 hover:text-red-600 hover:bg-red-50/60 transition-all cursor-pointer"

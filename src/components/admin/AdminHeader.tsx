@@ -32,7 +32,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const timeAgoText = formatTimeAgo(lastSyncedAt);
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-100/80 px-4 py-3 flex items-center justify-between shadow-xs">
+    <header className="sticky top-0 z-30 bg-white border-b border-gray-100/80 px-4 py-3 flex items-center justify-between shadow-xs pt-safe">
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMenu}

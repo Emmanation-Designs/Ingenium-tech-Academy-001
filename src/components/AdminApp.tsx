@@ -375,7 +375,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       />
 
       {/* Main View Container */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-4 md:py-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 md:py-6 pb-24 md:pb-8">
         {loading && courses.length === 0 && students.length === 0 && (
           <div className="flex items-center justify-center py-12 gap-2 text-xs font-semibold text-gray-500">
             <RefreshCw className="w-4 h-4 animate-spin text-[#0A9D8F]" />

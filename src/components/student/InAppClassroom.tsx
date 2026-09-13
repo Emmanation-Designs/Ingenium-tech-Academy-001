@@ -201,7 +201,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
     return (
       <div className="fixed inset-0 bg-[#070A0E] text-white z-50 flex flex-col select-none overflow-hidden">
         {/* Top Floating Header */}
-        <div className="absolute top-3 left-4 right-4 flex items-center justify-between z-30 pointer-events-none">
+        <div className="absolute top-3 left-4 right-4 flex items-center justify-between z-30 pointer-events-none pt-safe pl-safe pr-safe">
           <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold pointer-events-auto border border-white/10 shadow-lg">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
             <span className="text-red-400 font-extrabold uppercase tracking-wider text-[11px]">LIVE</span>
@@ -376,7 +376,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
         </div>
 
         {/* Floating Bottom Control Bar */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-zinc-900/95 backdrop-blur-md px-5 py-2 rounded-full border border-white/15 flex items-center gap-5 z-40 shadow-2xl">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-zinc-900/95 backdrop-blur-md px-5 py-2 rounded-full border border-white/15 flex items-center gap-5 z-40 shadow-2xl pb-safe">
           <button 
             type="button"
             onClick={() => setIsMuted(!isMuted)}
@@ -433,7 +433,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
     <div className="flex-1 flex flex-col bg-white min-h-[calc(100vh-60px)] select-none">
       
       {/* Top Navigation Bar */}
-      <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between bg-white sticky top-0 z-20">
+      <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between bg-white sticky top-0 z-20 pt-safe">
         <div className="flex items-center gap-2">
           <button 
             type="button"
@@ -728,7 +728,7 @@ export const InAppClassroom: React.FC<InAppClassroomProps> = ({
           </div>
 
           {/* Chat Message Input */}
-          <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-zinc-200 flex items-center gap-2">
+          <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-zinc-200 flex items-center gap-2 pb-safe">
             <input 
               type="text"
               value={inputMessage}

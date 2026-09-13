@@ -227,8 +227,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* 2x2 Metric Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      {/* Metric Cards Grid - 2 cols on mobile/tablet, 4 cols on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total Students */}
         <div 
           onClick={() => onNavigate('students')}

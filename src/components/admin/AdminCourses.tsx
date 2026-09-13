@@ -108,7 +108,7 @@ export const AdminCourses: React.FC<AdminCoursesProps> = ({
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 space-y-0">
           {filteredCourses.map(course => {
             const isPublished = course.is_published || course.status === 'published';
             const primaryPrice = course.pricing 

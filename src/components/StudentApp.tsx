@@ -368,14 +368,14 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   return (
     <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#0A9D8F]/30">
       
-      {/* Mobile Frame Simulator */}
-      <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col justify-between border-x border-[#EAEAEA]">
+      {/* Responsive App Container */}
+      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto bg-white min-h-screen shadow-sm sm:shadow-lg relative flex flex-col justify-between border-x border-[#EAEAEA]">
         
         {/* DETAILED OVERLAY 2: CHOOSE CLASS TIME */}
         {selectedCourseForDetails && showClassTimeSelector && (
           <div className="absolute inset-0 bg-white z-50 flex flex-col justify-between animate-in slide-in-from-right duration-250">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-[#F2F2F2] flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-[#F2F2F2] flex items-center justify-between pt-safe">
               <button 
                 onClick={() => setShowClassTimeSelector(false)} 
                 className="p-1 text-zinc-800 hover:text-zinc-600 transition-all"
@@ -388,7 +388,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-6">
               {/* Local timezone alert banner */}
               <div className="bg-[#E6F5F4] border border-[#0A9D8F]/30 p-4 rounded-2xl flex items-start gap-3">
                 <Globe className="w-4 h-4 text-[#087A6F] shrink-0 mt-0.5" />
@@ -452,7 +452,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="p-6 border-t border-[#F2F2F2] space-y-3 bg-white">
+            <div className="p-4 sm:p-6 border-t border-[#F2F2F2] space-y-3 bg-white pb-safe">
               <button 
                 onClick={handleSelectCourse}
                 disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
@@ -475,7 +475,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             <div className="flex-1 overflow-y-auto pb-6">
               
               {/* Back & Heart Hero Overlay Header */}
-              <div className="relative w-full aspect-[16/10] bg-zinc-100">
+              <div className="relative w-full aspect-[16/10] max-h-80 bg-zinc-100">
                 <img 
                   src={getCourseImage(selectedCourseForDetails)} 
                   alt={selectedCourseForDetails.title}
@@ -484,7 +484,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 />
                 
                 {/* Header buttons overlay */}
-                <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between pt-safe">
                   <button 
                     onClick={() => setSelectedCourseForDetails(null)}
                     className="p-2.5 rounded-full bg-white/90 shadow-md hover:bg-white text-black active:scale-95 transition-all"
@@ -498,7 +498,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               </div>
 
               {/* Course Title and Badges */}
-              <div className="px-6 pt-5 space-y-4">
+              <div className="px-4 sm:px-6 pt-5 space-y-4">
                 <div className="flex">
                   <span className="bg-[#E6F5F4] text-[#087A6F] text-xs font-semibold px-3 py-1 rounded-md">
                     {selectedCourseForDetails.category || 'Technology'}
@@ -564,7 +564,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Sticky Details Footer */}
-            <div className="px-6 py-4 border-t border-[#F2F2F2] bg-white flex items-center justify-between gap-4 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+            <div className="px-4 sm:px-6 py-4 border-t border-[#F2F2F2] bg-white flex items-center justify-between gap-4 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] pb-safe">
               <div>
                 <span className="block text-[#0A9D8F] text-lg font-bold leading-none">
                   {getCoursePriceAndCurrency(selectedCourseForDetails).symbol}
@@ -595,13 +595,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {activeTab === 'home' && (
           <div className="flex-1 flex flex-col bg-white">
             {/* Header branding row */}
-            <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5]">
+            <div className="px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5] pt-safe">
               <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
 
               {/* Notification bell */}
               <button 
                 onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                className="p-2 rounded-full hover:bg-zinc-100 transition-colors relative"
+                className="p-2 rounded-full hover:bg-zinc-100 transition-colors relative cursor-pointer"
               >
                 <Bell className="w-4 h-4 text-black" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#0A9D8F]"></span>
@@ -609,7 +609,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Scrollable home area */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-6">
               
               {/* Greetings */}
               <div className="space-y-1">
@@ -655,7 +655,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 </div>
 
                 {/* Horizontal scrolling Categories layout exactly like reference */}
-                <div className="flex items-start gap-3.5 overflow-x-auto pb-2 pt-1 scrollbar-none">
+                <div className="flex items-start gap-3.5 overflow-x-auto pb-2 pt-1 no-scrollbar">
                   {/* "All Courses" category box */}
                   <button
                     onClick={() => setSelectedCategoryId('')}
@@ -727,7 +727,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     <p className="text-xs font-normal text-zinc-400">No courses available yet.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredCourses.map(course => {
                       const pricingInfo = getCoursePriceAndCurrency(course);
                       return (
@@ -818,7 +818,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {/* MAIN TAB 2: MY SELECTION */}
         {activeTab === 'selections' && (
           <div className="flex-1 flex flex-col bg-white">
-            <div className="px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between pt-safe">
               <div className="flex items-center gap-2.5">
                 <BrandLogo size="xs" />
                 <h1 className="text-base font-semibold text-zinc-900">My Selection</h1>
@@ -829,7 +829,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Segmented status filter tabs with underline indicator */}
-            <div className="px-6 border-b border-[#F0F0F0] flex gap-6">
+            <div className="px-4 sm:px-6 border-b border-[#F0F0F0] flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar">
               {[
                 { key: 'all', label: 'All' },
                 { key: 'pending', label: 'Pending' },
@@ -854,14 +854,14 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* List area */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
               {selections.filter(s => selectionFilter === 'all' ? true : s.status === selectionFilter).length === 0 ? (
                 <div className="p-8 text-center bg-zinc-50 border border-zinc-100 rounded-3xl space-y-2 mt-6">
                   <Heart className="w-8 h-8 text-zinc-300 mx-auto" />
                   <p className="text-xs font-normal text-zinc-400">You haven't selected any courses yet.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 space-y-0">
                   {selections
                     .filter(s => selectionFilter === 'all' ? true : s.status === selectionFilter)
                     .map(sel => {
@@ -929,7 +929,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Bottom Waiting Alert Box */}
-            <div className="p-4 mx-6 mb-6 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl">
+            <div className="p-4 mx-4 sm:mx-6 mb-6 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl">
               <p className="text-xs font-medium text-[#087A6F] text-center leading-relaxed">
                 Your course selections are waiting for admin approval. You will be notified once a course is approved.
               </p>
@@ -940,13 +940,13 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         {/* MAIN TAB 3: MY LEARNING */}
         {activeTab === 'learning' && (
           <div className="flex-1 flex flex-col bg-white">
-            <div className="px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between pt-safe">
               <h1 className="text-base font-semibold text-zinc-900">My Learning</h1>
               <BrandLogo size="xs" />
             </div>
 
             {/* List of active courses */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
               {enrollments.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 pt-20">
                   {/* Official Ingenium Brand Logo with soft green frame */}
@@ -971,7 +971,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-0">
                   {enrollments.map(enr => {
                     const courseObj = courses.find(c => c.id === enr.course_id);
                     return (
@@ -1047,7 +1047,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           <div className="flex-1 flex flex-col bg-white">
             
             {/* Elegant Solid green top card */}
-            <div className="bg-[#0A9D8F] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs">
+            <div className="bg-[#0A9D8F] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs pt-safe">
               <h2 className="text-sm font-semibold uppercase tracking-wider">Student Profile</h2>
               
               {/* User photo matching Screen 6 */}
@@ -1155,7 +1155,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         )}
 
         {/* STICKY BOTTOM TASKBAR - Matching 5 tabs of the reference UI */}
-        <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2 px-4 flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+        <nav className="sticky bottom-0 bg-white border-t border-[#F2F2F2] py-2 px-4 pb-safe flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
           
           <button
             onClick={() => {

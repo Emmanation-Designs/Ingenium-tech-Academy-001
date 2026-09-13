@@ -219,26 +219,26 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-gray-900 font-sans flex flex-col selection:bg-[#0A9D8F]/20">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 pt-safe">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
             <BrandLogo size="md" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm tracking-tight text-gray-950">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <span className="font-extrabold text-sm tracking-tight text-gray-950 truncate max-w-[140px] sm:max-w-none">
                   Ingenium Tech Academy
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F]">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] shrink-0">
                   Teacher Portal
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-400 truncate max-w-[180px] sm:max-w-none">
                 Welcome back, {currentUser.full_name || 'Instructor'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => loadTeacherData(true)}
@@ -261,7 +261,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
         </div>
 
         {/* Tabs Bar */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto border-t border-gray-100 py-1.5">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto no-scrollbar border-t border-gray-100 py-1.5">
           <button
             type="button"
             onClick={() => setActiveTab('overview')}

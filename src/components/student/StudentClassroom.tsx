@@ -407,7 +407,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
     <div className="flex-1 flex flex-col bg-white min-h-[calc(100vh-60px)]">
       
       {/* Top Header with Brand Logo */}
-      <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20">
+      <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 pt-safe">
         <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
         <button className="p-2 rounded-full hover:bg-zinc-100 transition relative">
           <Bell className="w-4 h-4 text-zinc-800" />
@@ -415,7 +415,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
       </div>
 
       {/* Classroom Title Section */}
-      <div className="px-6 pt-5 pb-2">
+      <div className="px-4 sm:px-6 pt-5 pb-2">
         <h1 className="text-xl font-extrabold tracking-tight text-zinc-900">
           My Classroom
         </h1>
@@ -446,7 +446,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
         </div>
       ) : (
         /* STUDENT HAS APPROVED COURSES: Render Dynamic Live / Upcoming / No-Class Card */
-        <div className="p-6 space-y-6 max-w-xl mx-auto w-full">
+        <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full">
           
           {/* STATE 1: ACTIVE LIVE CLASS */}
           {activeLiveSession ? (
@@ -618,7 +618,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 space-y-0">
               {courseSummaries.map(summary => (
                 <div 
                   key={summary.course.id}

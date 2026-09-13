@@ -50,7 +50,7 @@ export const AdminStudents: React.FC<AdminStudentsProps> = ({
     });
 
     return (
-      <div className="space-y-4 pb-20 max-w-xl mx-auto">
+      <div className="space-y-4 pb-20 max-w-2xl mx-auto">
         {/* Top Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -291,7 +291,7 @@ export const AdminStudents: React.FC<AdminStudentsProps> = ({
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 space-y-0">
           {filteredStudents.map(student => {
             const joinDate = new Date(student.created_at).toLocaleDateString('en-US', {
               month: 'short',
