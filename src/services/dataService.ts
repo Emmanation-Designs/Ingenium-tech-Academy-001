@@ -1534,80 +1534,175 @@ export const dataService = {
     async getTeacherClasses(teacherId: string): Promise<{
       course: Course;
       schedule?: CourseSchedule;
+      schedules?: CourseSchedule[];
       assignmentId?: string;
       meetingUrl?: string;
-      students: { id: string; name: string; email: string; enrollmentStatus: string; enrolledAt: string }[];
+      nextSession?: ClassSession;
+      students: { id: string; name: string; email: string; enrollmentStatus: string; enrolledAt: string; scheduleLabel?: string }[];
     }[]> {
       if (!isSupabaseConfigured || !supabase) return [];
 
       try {
+        // 1. Fetch teacher assignments
         const { data: assignments, error: assnErr } = await supabase
           .from('teacher_course_assignments')
-          .select('*, courses!course_id(*), course_schedules!schedule_id(*)')
+          .select('*')
           .eq('teacher_id', teacherId);
 
+        if (assnErr) {
+          console.warn('[Supabase] Error loading teacher assignments:', assnErr.message);
+        }
+
+        // 2. Fetch direct schedules assigned to this teacher
         const { data: directSchedules, error: schedErr } = await supabase
           .from('course_schedules')
-          .select('*, courses!course_id(*)')
+          .select('*')
           .eq('teacher_id', teacherId);
 
-        const classesMap = new Map<string, any>();
+        if (schedErr) {
+          console.warn('[Supabase] Error loading direct schedules:', schedErr.message);
+        }
 
-        (assignments || []).forEach((a: any) => {
-          if (a.courses) {
-            const key = `${a.course_id}_${a.schedule_id || 'all'}`;
-            classesMap.set(key, {
-              course: a.courses,
-              schedule: a.course_schedules || undefined,
-              assignmentId: a.id,
-              meetingUrl: a.course_schedules?.meeting_url
-            });
-          }
+        // Collect all assigned course IDs
+        const courseIdSet = new Set<string>();
+        (assignments || []).forEach((a: any) => { if (a.course_id) courseIdSet.add(a.course_id); });
+        (directSchedules || []).forEach((s: any) => { if (s.course_id) courseIdSet.add(s.course_id); });
+
+        const courseIds = Array.from(courseIdSet);
+        if (courseIds.length === 0) return [];
+
+        // 3. Fetch courses
+        const { data: coursesData } = await supabase
+          .from('courses')
+          .select('*')
+          .in('id', courseIds);
+
+        const coursesMap = new Map((coursesData || []).map((c: any) => [c.id, c]));
+
+        // 4. Fetch ALL schedules for these courses
+        const { data: allSchedulesData } = await supabase
+          .from('course_schedules')
+          .select('*')
+          .in('course_id', courseIds)
+          .order('created_at', { ascending: true });
+
+        const schedulesByCourse = new Map<string, CourseSchedule[]>();
+        (allSchedulesData || []).forEach((s: any) => {
+          const list = schedulesByCourse.get(s.course_id) || [];
+          list.push(s as CourseSchedule);
+          schedulesByCourse.set(s.course_id, list);
         });
 
-        (directSchedules || []).forEach((s: any) => {
-          if (s.courses) {
-            const key = `${s.course_id}_${s.id}`;
-            if (!classesMap.has(key)) {
-              classesMap.set(key, {
-                course: s.courses,
-                schedule: s,
-                assignmentId: undefined,
-                meetingUrl: s.meeting_url
+        // 5. Fetch upcoming live class sessions
+        const { data: sessionsData } = await supabase
+          .from('class_sessions')
+          .select('*')
+          .in('course_id', courseIds)
+          .order('start_time', { ascending: true });
+
+        const sessionsByCourse = new Map<string, ClassSession[]>();
+        (sessionsData || []).forEach((s: any) => {
+          const list = sessionsByCourse.get(s.course_id) || [];
+          list.push(s as ClassSession);
+          sessionsByCourse.set(s.course_id, list);
+        });
+
+        // 6. Fetch enrollments & course selections
+        const { data: enrs } = await supabase
+          .from('enrollments')
+          .select('*')
+          .in('course_id', courseIds);
+
+        const { data: selections } = await supabase
+          .from('course_selections')
+          .select('*')
+          .in('course_id', courseIds);
+
+        // Collect all student IDs
+        const studentIds = Array.from(new Set([
+          ...(enrs || []).map((e: any) => e.student_id),
+          ...(selections || []).map((s: any) => s.student_id)
+        ])).filter(Boolean);
+
+        // Fetch student profiles directly to avoid fragile PostgREST join errors
+        const { data: studentProfiles } = studentIds.length > 0
+          ? await supabase
+              .from('profiles')
+              .select('id, full_name, email, phone, avatar_url')
+              .in('id', studentIds)
+          : { data: [] };
+
+        const profileMap = new Map((studentProfiles || []).map((p: any) => [p.id, p]));
+
+        // 7. Assemble classes per assigned course
+        const result: any[] = [];
+        const nowIso = new Date().toISOString();
+
+        for (const courseId of courseIds) {
+          const course = coursesMap.get(courseId);
+          if (!course) continue;
+
+          const courseSchedules = schedulesByCourse.get(courseId) || [];
+          const assn = (assignments || []).find((a: any) => a.course_id === courseId);
+
+          // Find primary assigned schedule if specific, otherwise first active schedule
+          const assignedSchedule = assn?.schedule_id
+            ? courseSchedules.find(s => s.id === assn.schedule_id) || null
+            : courseSchedules.find(s => s.is_active) || courseSchedules[0] || null;
+
+          // Find meeting URL
+          const meetingUrl = assignedSchedule?.meeting_url
+            || courseSchedules.find(s => s.meeting_url)?.meeting_url
+            || '';
+
+          // Find next upcoming session
+          const courseSessions = sessionsByCourse.get(courseId) || [];
+          const nextSession = courseSessions.find(s => s.start_time >= nowIso && s.status !== 'completed' && s.status !== 'cancelled')
+            || courseSessions.find(s => s.status === 'scheduled')
+            || courseSessions[0];
+
+          // Map students for this course
+          const courseEnrs = (enrs || []).filter((e: any) => e.course_id === courseId && e.status !== 'suspended');
+          const courseSelections = (selections || []).filter((s: any) => s.course_id === courseId && (s.status === 'approved' || s.status === 'active'));
+
+          const studentMap = new Map<string, any>();
+
+          courseEnrs.forEach((e: any) => {
+            const prof = profileMap.get(e.student_id);
+            const sched = e.schedule_id ? courseSchedules.find(s => s.id === e.schedule_id) : undefined;
+            studentMap.set(e.student_id, {
+              id: e.student_id,
+              name: prof?.full_name || 'Student',
+              email: prof?.email || '',
+              enrollmentStatus: e.status || 'active',
+              enrolledAt: e.created_at || new Date().toISOString(),
+              scheduleLabel: sched?.label
+            });
+          });
+
+          courseSelections.forEach((s: any) => {
+            if (!studentMap.has(s.student_id)) {
+              const prof = profileMap.get(s.student_id);
+              const sched = s.schedule_id ? courseSchedules.find(sc => sc.id === s.schedule_id) : undefined;
+              studentMap.set(s.student_id, {
+                id: s.student_id,
+                name: prof?.full_name || 'Student',
+                email: prof?.email || '',
+                enrollmentStatus: 'active',
+                enrolledAt: s.created_at || new Date().toISOString(),
+                scheduleLabel: sched?.label
               });
             }
-          }
-        });
-
-        const result: any[] = [];
-        for (const item of Array.from(classesMap.values())) {
-          let enrollmentsQuery = supabase
-            .from('enrollments')
-            .select('*, profiles:student_id!student_id(id, full_name, email)')
-            .eq('course_id', item.course.id)
-            .eq('status', 'active')
-            .eq('access_granted', true);
-
-          if (item.schedule?.id) {
-            enrollmentsQuery = enrollmentsQuery.or(`schedule_id.eq.${item.schedule.id},schedule_id.is.null`);
-          }
-
-          const { data: enrs } = await enrollmentsQuery;
-
-          const students = (enrs || []).map((e: any) => ({
-            id: e.profiles?.id || e.student_id,
-            name: e.profiles?.full_name || 'Student',
-            email: e.profiles?.email || '',
-            enrollmentStatus: e.status,
-            enrolledAt: e.created_at
-          }));
+          });
 
           result.push({
-            course: item.course,
-            schedule: item.schedule,
-            assignmentId: item.assignmentId,
-            meetingUrl: item.meetingUrl,
-            students
+            course,
+            schedule: assignedSchedule || undefined,
+            schedules: courseSchedules,
+            assignmentId: assn?.id,
+            meetingUrl: meetingUrl || undefined,
+            nextSession,
+            students: Array.from(studentMap.values())
           });
         }
 
@@ -1616,6 +1711,139 @@ export const dataService = {
         console.error('[Supabase] Error loading teacher classes:', e);
         return [];
       }
+    },
+
+    async saveTeacherClassDetails(params: {
+      teacherId: string;
+      courseId: string;
+      scheduleId?: string;
+      meetingUrl?: string;
+      scheduleLabel?: string;
+      dayOfWeek?: string;
+      startTime?: string;
+      endTime?: string;
+      timezone?: string;
+    }): Promise<CourseSchedule> {
+      if (!isSupabaseConfigured || !supabase) throw new Error('Database not configured.');
+
+      const trimmedUrl = params.meetingUrl !== undefined ? params.meetingUrl.trim() : undefined;
+
+      if (params.scheduleId) {
+        // Update existing schedule
+        const updates: Record<string, any> = {
+          updated_at: new Date().toISOString()
+        };
+        if (trimmedUrl !== undefined) updates.meeting_url = trimmedUrl;
+        if (params.scheduleLabel !== undefined) updates.label = params.scheduleLabel.trim();
+        if (params.dayOfWeek !== undefined) updates.day_of_week = params.dayOfWeek.trim();
+        if (params.startTime !== undefined) updates.start_time = params.startTime.trim();
+        if (params.endTime !== undefined) updates.end_time = params.endTime.trim();
+        if (params.timezone !== undefined) updates.timezone = params.timezone.trim();
+        if (params.teacherId) updates.teacher_id = params.teacherId;
+
+        const { data, error } = await supabase
+          .from('course_schedules')
+          .update(updates)
+          .eq('id', params.scheduleId)
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+
+        // Also update class_sessions if meeting url changed
+        if (trimmedUrl) {
+          await supabase
+            .from('class_sessions')
+            .update({ meeting_url: trimmedUrl, updated_at: new Date().toISOString() })
+            .eq('schedule_id', params.scheduleId);
+        }
+
+        realtimeSync.notifyMutation('course_schedules', 'UPDATE');
+        realtimeSync.notifyMutation('class_sessions', 'UPDATE');
+        return data as CourseSchedule;
+      }
+
+      // If no scheduleId was provided, check if a schedule already exists for this course
+      const { data: existingSchedules } = await supabase
+        .from('course_schedules')
+        .select('*')
+        .eq('course_id', params.courseId)
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      if (existingSchedules && existingSchedules.length > 0) {
+        const sched = existingSchedules[0];
+        const updates: Record<string, any> = {
+          updated_at: new Date().toISOString()
+        };
+        if (trimmedUrl !== undefined) updates.meeting_url = trimmedUrl;
+        if (params.scheduleLabel !== undefined) updates.label = params.scheduleLabel.trim();
+        if (params.dayOfWeek !== undefined) updates.day_of_week = params.dayOfWeek.trim();
+        if (params.startTime !== undefined) updates.start_time = params.startTime.trim();
+        if (params.endTime !== undefined) updates.end_time = params.endTime.trim();
+        if (params.timezone !== undefined) updates.timezone = params.timezone.trim();
+        if (!sched.teacher_id && params.teacherId) updates.teacher_id = params.teacherId;
+
+        const { data, error } = await supabase
+          .from('course_schedules')
+          .update(updates)
+          .eq('id', sched.id)
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+
+        // Update teacher assignment link if needed
+        await supabase
+          .from('teacher_course_assignments')
+          .update({ schedule_id: sched.id })
+          .eq('teacher_id', params.teacherId)
+          .eq('course_id', params.courseId);
+
+        if (trimmedUrl) {
+          await supabase
+            .from('class_sessions')
+            .update({ meeting_url: trimmedUrl, updated_at: new Date().toISOString() })
+            .eq('course_id', params.courseId);
+        }
+
+        realtimeSync.notifyMutation('course_schedules', 'UPDATE');
+        realtimeSync.notifyMutation('teacher_course_assignments', 'UPDATE');
+        return data as CourseSchedule;
+      }
+
+      // No schedule exists at all for this course: insert a new one!
+      const newSchedPayload = {
+        course_id: params.courseId,
+        label: params.scheduleLabel?.trim() || 'Online Class Schedule',
+        day_of_week: params.dayOfWeek?.trim() || 'Monday, Wednesday, Friday',
+        start_time: params.startTime?.trim() || '18:00',
+        end_time: params.endTime?.trim() || '20:00',
+        timezone: params.timezone?.trim() || 'Africa/Lagos',
+        is_active: true,
+        teacher_id: params.teacherId,
+        meeting_url: trimmedUrl || null
+      };
+
+      const { data: insertedSched, error: insertErr } = await supabase
+        .from('course_schedules')
+        .insert([newSchedPayload])
+        .select()
+        .single();
+
+      if (insertErr) throw new Error(insertErr.message);
+
+      // Link in teacher_course_assignments
+      await supabase
+        .from('teacher_course_assignments')
+        .update({ schedule_id: insertedSched.id })
+        .eq('teacher_id', params.teacherId)
+        .eq('course_id', params.courseId);
+
+      realtimeSync.notifyMutation('course_schedules', 'INSERT');
+      realtimeSync.notifyMutation('teacher_course_assignments', 'UPDATE');
+
+      return insertedSched as CourseSchedule;
     },
 
     async saveMeetingUrl(scheduleId: string, meetingUrl: string, sessionId?: string): Promise<void> {
@@ -1776,6 +2004,19 @@ export const dataService = {
   },
   saveClassMeetingUrl(scheduleId: string, meetingUrl: string) {
     return dataService.teachers.saveMeetingUrl(scheduleId, meetingUrl);
+  },
+  saveTeacherClassDetails(params: {
+    teacherId: string;
+    courseId: string;
+    scheduleId?: string;
+    meetingUrl?: string;
+    scheduleLabel?: string;
+    dayOfWeek?: string;
+    startTime?: string;
+    endTime?: string;
+    timezone?: string;
+  }) {
+    return dataService.teachers.saveTeacherClassDetails(params);
   },
   learning: learningService
 };

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   GraduationCap, BookOpen, Users, Calendar, Video, Clock, 
   Search, ExternalLink, Copy, Check, Save, User, Settings, 
-  LogOut, RefreshCw, AlertCircle, ChevronRight, X
+  LogOut, RefreshCw, AlertCircle, ChevronRight, X, Mail,
+  Play, Sparkles, Plus, Globe
 } from 'lucide-react';
-import { Profile, Course, CourseSchedule } from '../types';
+import { Profile, Course, CourseSchedule, ClassSession } from '../types';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { TeacherCourseWorkspace } from './teacher/TeacherCourseWorkspace';
@@ -21,9 +22,11 @@ type TeacherTab = 'overview' | 'classes' | 'students' | 'profile';
 interface TeacherClassItem {
   course: Course;
   schedule?: CourseSchedule;
+  schedules?: CourseSchedule[];
   assignmentId?: string;
   meetingUrl?: string;
-  students: { id: string; name: string; email: string; enrollmentStatus: string; enrolledAt: string }[];
+  nextSession?: ClassSession;
+  students: { id: string; name: string; email: string; enrollmentStatus: string; enrolledAt: string; scheduleLabel?: string }[];
 }
 
 export const TeacherApp: React.FC<TeacherAppProps> = ({
@@ -43,14 +46,26 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   const [classes, setClasses] = useState<TeacherClassItem[]>([]);
   const [studentSearch, setStudentSearch] = useState<string>('');
 
-  // Meeting Link edit modal
+  // Meeting Link & Schedule edit modal state
   const [editingSchedule, setEditingSchedule] = useState<{
-    scheduleId: string;
+    courseId: string;
     courseTitle: string;
+    scheduleId?: string;
     scheduleLabel?: string;
+    dayOfWeek?: string;
+    startTime?: string;
+    endTime?: string;
+    timezone?: string;
     currentUrl: string;
   } | null>(null);
+
   const [meetUrlInput, setMeetUrlInput] = useState<string>('');
+  const [scheduleLabelInput, setScheduleLabelInput] = useState<string>('');
+  const [dayOfWeekInput, setDayOfWeekInput] = useState<string>('');
+  const [startTimeInput, setStartTimeInput] = useState<string>('18:00');
+  const [endTimeInput, setEndTimeInput] = useState<string>('20:00');
+  const [timezoneInput, setTimezoneInput] = useState<string>('Africa/Lagos');
+
   const [isSavingUrl, setIsSavingUrl] = useState<boolean>(false);
   const [urlFeedback, setUrlFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
@@ -97,10 +112,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
   // Aggregate stats
   const totalCourses = new Set(classes.map(c => c.course.id)).size;
-  const totalSchedules = classes.filter(c => c.schedule).length;
+  const totalSchedules = classes.reduce((acc, c) => acc + (c.schedules?.length || (c.schedule ? 1 : 0)), 0);
   
   // Unique active students
-  const uniqueStudentsMap = new Map<string, { id: string; name: string; email: string; courseTitle: string; enrolledAt: string }>();
+  const uniqueStudentsMap = new Map<string, { id: string; name: string; email: string; courseTitle: string; enrolledAt: string; scheduleLabel?: string }>();
   classes.forEach(c => {
     c.students.forEach(s => {
       if (!uniqueStudentsMap.has(s.id)) {
@@ -119,16 +134,25 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
     s.courseTitle.toLowerCase().includes(studentSearch.toLowerCase())
   );
 
-  // Handlers for Google Meet URL
+  // Handlers for Google Meet URL & Schedule
   const handleOpenMeetModal = (item: TeacherClassItem) => {
-    if (!item.schedule?.id) return;
     setEditingSchedule({
-      scheduleId: item.schedule.id,
+      courseId: item.course.id,
       courseTitle: item.course.title,
-      scheduleLabel: item.schedule.label,
+      scheduleId: item.schedule?.id,
+      scheduleLabel: item.schedule?.label || 'Regular Class Schedule',
+      dayOfWeek: item.schedule?.day_of_week || 'Monday, Wednesday, Friday',
+      startTime: item.schedule?.start_time || '18:00',
+      endTime: item.schedule?.end_time || '20:00',
+      timezone: item.schedule?.timezone || currentUser.timezone || 'Africa/Lagos',
       currentUrl: item.meetingUrl || ''
     });
     setMeetUrlInput(item.meetingUrl || '');
+    setScheduleLabelInput(item.schedule?.label || 'Regular Class Schedule');
+    setDayOfWeekInput(item.schedule?.day_of_week || 'Monday, Wednesday, Friday');
+    setStartTimeInput(item.schedule?.start_time || '18:00');
+    setEndTimeInput(item.schedule?.end_time || '20:00');
+    setTimezoneInput(item.schedule?.timezone || currentUser.timezone || 'Africa/Lagos');
     setUrlFeedback(null);
   };
 
@@ -146,14 +170,25 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
     }
 
     try {
-      await dataService.saveClassMeetingUrl(editingSchedule.scheduleId, trimmed);
-      setUrlFeedback({ type: 'success', message: 'Class meeting link updated successfully.' });
+      await dataService.saveTeacherClassDetails({
+        teacherId: currentUser.id,
+        courseId: editingSchedule.courseId,
+        scheduleId: editingSchedule.scheduleId,
+        meetingUrl: trimmed,
+        scheduleLabel: scheduleLabelInput.trim() || 'Regular Class Schedule',
+        dayOfWeek: dayOfWeekInput.trim() || 'Flexible / Online',
+        startTime: startTimeInput.trim() || '18:00',
+        endTime: endTimeInput.trim() || '20:00',
+        timezone: timezoneInput
+      });
+
+      setUrlFeedback({ type: 'success', message: 'Class schedule and meeting link updated successfully.' });
       await loadTeacherData(true);
       setTimeout(() => {
         setEditingSchedule(null);
-      }, 1200);
+      }, 1000);
     } catch (err: any) {
-      setUrlFeedback({ type: 'error', message: err.message || 'Failed to save meeting link.' });
+      setUrlFeedback({ type: 'error', message: err.message || 'Failed to save class details.' });
     } finally {
       setIsSavingUrl(false);
     }
@@ -396,25 +431,25 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                           key={idx}
                           className="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80 space-y-3 flex flex-col justify-between"
                         >
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A9D8F]">
-                                  {item.course.category || 'Tech'}
+                                  {item.course.category || 'Course'}
                                 </span>
                                 <h4 className="text-xs font-bold text-gray-950">{item.course.title}</h4>
                               </div>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700">
-                                {item.students.length} Students
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700 shrink-0">
+                                {item.students.length} {item.students.length === 1 ? 'Student' : 'Students'}
                               </span>
                             </div>
 
                             {item.schedule && (
                               <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-white p-2 rounded-xl border border-gray-100">
-                                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="font-semibold">{item.schedule.label}</span>
+                                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                <span className="font-semibold truncate">{item.schedule.label}</span>
                                 <span className="text-gray-400">•</span>
-                                <span>{item.schedule.day_of_week} {item.schedule.start_time}</span>
+                                <span className="truncate">{item.schedule.day_of_week} {item.schedule.start_time} - {item.schedule.end_time}</span>
                               </div>
                             )}
 
@@ -422,27 +457,46 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                             <div className="text-xs">
                               {item.meetingUrl ? (
                                 <div className="flex items-center justify-between p-2 rounded-xl bg-[#E6F5F4] border border-[#0A9D8F]/20 text-[#0A9D8F]">
-                                  <div className="flex items-center gap-1.5 truncate max-w-[220px]">
+                                  <div className="flex items-center gap-1.5 truncate max-w-[200px]">
                                     <Video className="w-3.5 h-3.5 shrink-0" />
                                     <span className="truncate text-[11px] font-mono">{item.meetingUrl}</span>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyLink(item.meetingUrl!)}
-                                    className="p-1 hover:bg-white rounded-md transition-colors cursor-pointer"
-                                    title="Copy meeting link"
-                                  >
-                                    {copiedLink === item.meetingUrl ? (
-                                      <Check className="w-3.5 h-3.5 text-[#0A9D8F]" />
-                                    ) : (
-                                      <Copy className="w-3.5 h-3.5 text-[#0A9D8F]" />
-                                    )}
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigateSameTab(item.meetingUrl!)}
+                                      className="px-2 py-0.5 rounded bg-[#0A9D8F] text-white text-[10px] font-bold hover:bg-[#087A6F] transition-colors cursor-pointer"
+                                      title="Join Google Meet"
+                                    >
+                                      Join
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyLink(item.meetingUrl!)}
+                                      className="p-1 hover:bg-white rounded transition-colors cursor-pointer"
+                                      title="Copy meeting link"
+                                    >
+                                      {copiedLink === item.meetingUrl ? (
+                                        <Check className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                                      )}
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="p-2 rounded-xl bg-white border border-dashed border-gray-300 text-gray-400 text-[11px] flex items-center gap-1.5">
-                                  <AlertCircle className="w-3.5 h-3.5" />
-                                  <span>No Google Meet link set for this schedule</span>
+                                <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/60 text-amber-800 text-[11px] flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                    <span className="truncate">No Google Meet link set</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenMeetModal(item)}
+                                    className="px-2 py-0.5 rounded bg-amber-600 text-white text-[10px] font-bold hover:bg-amber-700 transition-colors shrink-0 cursor-pointer"
+                                  >
+                                    Set Link
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -459,20 +513,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               className="flex-1 py-2 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                               <BookOpen className="w-3.5 h-3.5" />
-                              <span>Course Workspace</span>
+                              <span>Workspace</span>
                             </button>
 
-                            {item.schedule?.id && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenMeetModal(item)}
-                                className="py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                                title="Set Google Meet Link"
-                              >
-                                <Video className="w-3.5 h-3.5" />
-                                <span>Meet Link</span>
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMeetModal(item)}
+                              className="py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                              title="Configure Schedule and Meet Link"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>{item.meetingUrl ? 'Edit Meet' : 'Set Meet'}</span>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -487,14 +539,19 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
               <div className="space-y-4">
                 <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-950">Assigned Courses & Schedules</h3>
+                    <h3 className="text-sm font-bold text-gray-950">Assigned Courses & Classes</h3>
                     <p className="text-xs text-gray-500">
-                      Manage session links and review student rosters for each assigned schedule.
+                      Manage live Google Meet links, class timings, curriculum, and student rosters.
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-[#0A9D8F] bg-[#E6F5F4] px-3 py-1 rounded-full self-start sm:self-auto">
-                    {classes.length} Total Schedules
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#0A9D8F] bg-[#E6F5F4] px-3 py-1 rounded-full">
+                      {classes.length} Assigned {classes.length === 1 ? 'Course' : 'Courses'}
+                    </span>
+                    <span className="text-xs font-bold text-zinc-700 bg-zinc-100 px-3 py-1 rounded-full">
+                      {allStudents.length} Active {allStudents.length === 1 ? 'Student' : 'Students'}
+                    </span>
+                  </div>
                 </div>
 
                 {classes.length === 0 ? (
@@ -502,28 +559,42 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                     <BookOpen className="w-8 h-8 text-gray-400 mx-auto" />
                     <h4 className="text-sm font-bold text-gray-950">No Assigned Classes</h4>
                     <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      You are currently not assigned to any courses. Once the administrator assigns a schedule to you, it will appear here.
+                      You are currently not assigned to any courses. Once an academy administrator assigns a course to your account, it will appear here in real-time.
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => loadTeacherData(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Check for Assignments</span>
+                    </button>
                   </div>
                 ) : (
-                  <div className="space-y-3.5">
+                  <div className="space-y-4">
                     {classes.map((item, idx) => (
                       <div
                         key={idx}
                         className="bg-white p-5 rounded-3xl border border-gray-100 shadow-xs space-y-4"
                       >
+                        {/* Course Card Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A9D8F]">
-                              {item.course.category || 'Course'}
-                            </span>
-                            <h4 className="text-sm font-bold text-gray-950">{item.course.title}</h4>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Duration: {item.course.duration || '8 Weeks'} • Mode: {item.course.training_mode || 'Online'}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#0A9D8F] bg-[#E6F5F4] px-2 py-0.5 rounded-md">
+                                {item.course.category || 'Course'}
+                              </span>
+                              <span className="text-[10px] font-bold text-gray-500">
+                                {item.course.training_mode || 'Online'} • {item.course.difficulty_level || 'All Levels'}
+                              </span>
+                            </div>
+                            <h4 className="text-base font-bold text-gray-950">{item.course.title}</h4>
+                            <p className="text-xs text-gray-500">
+                              Duration: {item.course.duration || 'Self-paced / Cohort'} • {item.students.length} {item.students.length === 1 ? 'Student' : 'Students'} Enrolled
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                             <button
                               type="button"
                               onClick={() => setWorkspaceCourse({
@@ -537,86 +608,232 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               <span>Course Workspace</span>
                             </button>
 
-                            {item.schedule?.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMeetModal(item)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 text-zinc-800 text-xs font-bold hover:bg-zinc-200 transition-colors cursor-pointer"
+                            >
+                              <Video className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                              <span>{item.meetingUrl ? 'Edit Meet Link' : 'Set Meet Link'}</span>
+                            </button>
+
+                            {item.meetingUrl && (
                               <button
                                 type="button"
-                                onClick={() => handleOpenMeetModal(item)}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 text-zinc-800 text-xs font-bold hover:bg-zinc-200 transition-colors cursor-pointer"
+                                onClick={() => navigateSameTab(item.meetingUrl!)}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-xs cursor-pointer"
                               >
-                                <Video className="w-3.5 h-3.5" />
-                                <span>{item.meetingUrl ? 'Edit Meet' : 'Set Meet'}</span>
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                                <span>Join Class</span>
                               </button>
                             )}
                           </div>
                         </div>
 
-                        {/* Schedule & Link details */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
-                            <span className="text-[10px] font-bold uppercase text-gray-400">Class Schedule</span>
-                            {item.schedule ? (
-                              <div className="text-xs text-gray-900 space-y-0.5">
-                                <p className="font-bold">{item.schedule.label}</p>
-                                <p className="text-gray-500">
-                                  {item.schedule.day_of_week} • {item.schedule.start_time} - {item.schedule.end_time}
-                                </p>
+                        {/* Live Panels: Class Schedule & Google Meet Link */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                          {/* Schedule Panel */}
+                          <div className="p-3.5 bg-gray-50/80 rounded-2xl border border-gray-100 space-y-2 flex flex-col justify-between">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                                  <Calendar className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                                  <span>Class Schedule & Timing</span>
+                                </div>
+                                {item.schedule && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                    Active Schedule
+                                  </span>
+                                )}
                               </div>
-                            ) : (
-                              <p className="text-xs text-gray-400 italic">General Course Assignment (All Schedules)</p>
-                            )}
+
+                              {item.schedule ? (
+                                <div className="space-y-1 text-xs text-gray-900 bg-white p-2.5 rounded-xl border border-gray-100">
+                                  <p className="font-bold text-gray-950">{item.schedule.label}</p>
+                                  <p className="text-gray-600 flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                    <span>{item.schedule.day_of_week} • {item.schedule.start_time} - {item.schedule.end_time}</span>
+                                  </p>
+                                  <p className="text-[11px] text-gray-400">
+                                    Timezone: {item.schedule.timezone || currentUser.timezone || 'Africa/Lagos'}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="p-2.5 bg-white rounded-xl border border-dashed border-gray-200 text-xs text-gray-500 space-y-1">
+                                  <p className="font-semibold text-gray-700">No specific timetable configured yet</p>
+                                  <p className="text-[11px] text-gray-400">Assign recurring days and class hours so students know when to attend.</p>
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMeetModal(item)}
+                              className="w-full mt-2 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Settings className="w-3 h-3 text-gray-500" />
+                              <span>{item.schedule ? 'Adjust Schedule & Times' : '+ Set Schedule Days & Hours'}</span>
+                            </button>
                           </div>
 
-                          <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
-                            <span className="text-[10px] font-bold uppercase text-gray-400">Google Meet Link</span>
-                            {item.meetingUrl ? (
-                              <div className="flex items-center justify-between text-xs text-gray-900">
-                                <a 
-                                  href={item.meetingUrl} 
-                                  target="_top"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    navigateSameTab(item.meetingUrl!);
-                                  }}
-                                  className="text-[#0A9D8F] font-mono hover:underline flex items-center gap-1 truncate max-w-[200px]"
-                                >
-                                  <span>{item.meetingUrl}</span>
-                                </a>
+                          {/* Google Meet Link Panel */}
+                          <div className="p-3.5 bg-gray-50/80 rounded-2xl border border-gray-100 space-y-2 flex flex-col justify-between">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                                  <Video className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                                  <span>Google Meet Class Link</span>
+                                </div>
+                                {item.meetingUrl ? (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F] border border-[#0A9D8F]/20">
+                                    Live Ready
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                    Link Needed
+                                  </span>
+                                )}
+                              </div>
+
+                              {item.meetingUrl ? (
+                                <div className="space-y-2 bg-white p-2.5 rounded-xl border border-gray-100">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <a
+                                      href={item.meetingUrl}
+                                      target="_top"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        navigateSameTab(item.meetingUrl!);
+                                      }}
+                                      className="text-xs font-mono font-bold text-[#0A9D8F] hover:underline truncate"
+                                      title="Open in same tab"
+                                    >
+                                      {item.meetingUrl}
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyLink(item.meetingUrl!)}
+                                      className="p-1 hover:bg-gray-100 rounded text-gray-500 transition-colors cursor-pointer shrink-0"
+                                      title="Copy meeting link"
+                                    >
+                                      {copiedLink === item.meetingUrl ? (
+                                        <Check className="w-3.5 h-3.5 text-[#0A9D8F]" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5 text-gray-500" />
+                                      )}
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] text-gray-400">
+                                    Visible to enrolled students starting 15 minutes before class.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="p-2.5 bg-white rounded-xl border border-dashed border-amber-200 text-xs text-gray-500 space-y-1">
+                                  <p className="font-semibold text-amber-800">No Google Meet link configured</p>
+                                  <p className="text-[11px] text-gray-400">Set a Google Meet URL so your students can join live lectures.</p>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMeetModal(item)}
+                                className="flex-1 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Video className="w-3 h-3 text-[#0A9D8F]" />
+                                <span>{item.meetingUrl ? 'Update Meet Link' : '+ Set Google Meet Link'}</span>
+                              </button>
+
+                              {item.meetingUrl && (
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyLink(item.meetingUrl!)}
-                                  className="p-1 hover:bg-white rounded-md text-gray-500 cursor-pointer"
+                                  onClick={() => navigateSameTab(item.meetingUrl!)}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                                 >
-                                  {copiedLink === item.meetingUrl ? (
-                                    <Check className="w-3.5 h-3.5 text-[#0A9D8F]" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                  )}
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>Start Meeting</span>
                                 </button>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-gray-400 italic">No link assigned. Click 'Set Meet Link'.</p>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
 
+                        {/* Upcoming Session Banner (if scheduled) */}
+                        {item.nextSession && (
+                          <div className="p-3 bg-gradient-to-r from-[#E6F5F4] to-emerald-50 rounded-2xl border border-[#0A9D8F]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-xs">
+                              <Sparkles className="w-4 h-4 text-[#0A9D8F] shrink-0" />
+                              <span className="font-bold text-gray-950">Next Live Session:</span>
+                              <span className="text-gray-700">{item.nextSession.title || 'Live Interactive Class'}</span>
+                              <span className="text-gray-400">•</span>
+                              <span className="font-mono text-gray-600">{new Date(item.nextSession.start_time).toLocaleString()}</span>
+                            </div>
+                            {item.meetingUrl && (
+                              <button
+                                type="button"
+                                onClick={() => navigateSameTab(item.meetingUrl!)}
+                                className="px-3 py-1 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors self-start sm:self-auto cursor-pointer"
+                              >
+                                Launch Session
+                              </button>
+                            )}
+                          </div>
+                        )}
+
                         {/* Enrolled Students in this class */}
-                        <div className="pt-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-gray-800">
-                              Enrolled Students ({item.students.length})
-                            </span>
+                        <div className="pt-2 border-t border-gray-100">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-900">
+                                Enrolled Students ({item.students.length})
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                Live Database Records
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => loadTeacherData(true)}
+                              className="text-xs text-[#0A9D8F] hover:underline flex items-center gap-1 cursor-pointer"
+                              title="Refresh student roster"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Refresh Roster</span>
+                            </button>
                           </div>
 
                           {item.students.length === 0 ? (
-                            <p className="text-xs text-gray-400 italic bg-gray-50 p-3 rounded-xl">
-                              No students currently enrolled in this specific schedule.
-                            </p>
+                            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center space-y-1">
+                              <p className="text-xs font-semibold text-gray-700">
+                                No students currently registered for this course.
+                              </p>
+                              <p className="text-[11px] text-gray-400">
+                                Once students enroll through the student portal or are assigned by the admin, they will immediately appear here.
+                              </p>
+                            </div>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                               {item.students.map(s => (
-                                <div key={s.id} className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-                                  <p className="font-bold text-gray-950 truncate">{s.name}</p>
-                                  <p className="text-[11px] text-gray-500 truncate">{s.email}</p>
+                                <div key={s.id} className="p-3 bg-gray-50 hover:bg-gray-100/80 rounded-2xl border border-gray-100 text-xs transition-colors flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-7 h-7 rounded-xl bg-[#0A9D8F]/10 text-[#0A9D8F] font-bold text-xs flex items-center justify-center shrink-0">
+                                      {s.name ? s.name.charAt(0).toUpperCase() : 'S'}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-gray-950 truncate">{s.name || 'Student'}</p>
+                                      <p className="text-[11px] text-gray-500 font-mono truncate">{s.email}</p>
+                                    </div>
+                                  </div>
+                                  {s.email && (
+                                    <a
+                                      href={`mailto:${s.email}`}
+                                      className="p-1.5 hover:bg-white rounded-lg text-gray-400 hover:text-gray-700 transition-colors shrink-0"
+                                      title={`Email ${s.name}`}
+                                    >
+                                      <Mail className="w-3.5 h-3.5" />
+                                    </a>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -812,18 +1029,18 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
         )}
       </main>
 
-      {/* Google Meet Link Modal */}
+      {/* Google Meet & Schedule Configuration Modal */}
       {editingSchedule && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center">
-                  <Video className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center shrink-0">
+                  <Video className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-950">Google Meet Link</h3>
-                  <p className="text-[11px] text-gray-500 truncate max-w-[240px]">
+                  <h3 className="text-sm font-bold text-gray-950">Live Class & Schedule Settings</h3>
+                  <p className="text-[11px] text-gray-500 truncate max-w-[280px]">
                     {editingSchedule.courseTitle}
                   </p>
                 </div>
@@ -839,8 +1056,8 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
             <form onSubmit={handleSaveMeetUrl} className="space-y-4">
               <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-[11px] text-gray-600 space-y-1">
-                <p className="font-semibold text-gray-900">Automated Student Privacy Policy:</p>
-                <p>Enrolled students will only be able to see this link starting 15 minutes before the scheduled class time.</p>
+                <p className="font-semibold text-gray-900">Live Class Automated Access:</p>
+                <p>Enrolled students will be able to join using this Google Meet link starting 15 minutes before the scheduled time.</p>
               </div>
 
               {urlFeedback && (
@@ -854,21 +1071,96 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                 </div>
               )}
 
+              {/* Google Meet URL */}
               <div>
                 <label className="block text-xs font-bold text-gray-900 mb-1">
-                  Meeting Link URL *
+                  Google Meet Link URL
                 </label>
                 <input
                   type="url"
-                  required
                   placeholder="https://meet.google.com/abc-defg-hij"
                   value={meetUrlInput}
                   onChange={e => setMeetUrlInput(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 font-mono placeholder:font-sans focus:outline-none focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]"
                 />
+                <p className="text-[10px] text-gray-400 mt-1">Provide a valid Google Meet link that opens directly in Chrome.</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Schedule Details */}
+              <div className="pt-2 border-t border-gray-100 space-y-3">
+                <h4 className="text-xs font-bold text-gray-900">Schedule & Timetable</h4>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Batch / Cohort Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Regular Batch, Evening Cohort"
+                    value={scheduleLabelInput}
+                    onChange={e => setScheduleLabelInput(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Meeting Days
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Monday, Wednesday, Friday or Saturdays"
+                    value={dayOfWeekInput}
+                    onChange={e => setDayOfWeekInput(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Start Time
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="18:00"
+                      value={startTimeInput}
+                      onChange={e => setStartTimeInput(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 font-mono focus:outline-none focus:border-[#0A9D8F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      End Time
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="20:00"
+                      value={endTimeInput}
+                      onChange={e => setEndTimeInput(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 font-mono focus:outline-none focus:border-[#0A9D8F]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Timezone
+                  </label>
+                  <select
+                    value={timezoneInput}
+                    onChange={e => setTimezoneInput(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                  >
+                    <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+                    <option value="UTC">UTC / GMT</option>
+                    <option value="Europe/London">Europe/London</option>
+                    <option value="America/New_York">America/New_York (EST)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setEditingSchedule(null)}
@@ -878,11 +1170,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingUrl || !meetUrlInput.trim()}
-                  className="px-5 py-2 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#0A9D8F]/90 transition-colors shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  disabled={isSavingUrl}
+                  className="px-5 py-2.5 rounded-xl bg-[#0A9D8F] text-white text-xs font-bold hover:bg-[#087A6F] transition-colors shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>{isSavingUrl ? 'Saving...' : 'Save Link'}</span>
+                  <span>{isSavingUrl ? 'Saving...' : 'Save Settings'}</span>
                 </button>
               </div>
             </form>
