@@ -5,7 +5,7 @@ import { StudentApp } from './components/StudentApp';
 import { AdminApp } from './components/AdminApp';
 import { TeacherApp } from './components/TeacherApp';
 import { TeacherInviteAccept } from './components/teacher/TeacherInviteAccept';
-import { TestPaymentGateway } from './components/student/TestPaymentGateway';
+import { PaymentReturnScreen } from './components/student/PaymentReturnScreen';
 import { dataService } from './services/dataService';
 import { Profile, UserRole } from './types';
 import { Loader2 } from 'lucide-react';
@@ -191,9 +191,26 @@ export default function App() {
     );
   }
 
-  // 0b. Wittypay Sandbox Test Payment Screen
-  if (typeof window !== 'undefined' && window.location.pathname.includes('/checkout/test-pay')) {
-    return <TestPaymentGateway />;
+  // 0b. Wittypay Payment Return Route (Displays verification status, does NOT self-fulfill)
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname;
+    const search = window.location.search;
+    if (
+      path.includes('/payment/callback') || 
+      path.includes('/payment/return') || 
+      (search.includes('order_id=') && (search.includes('ref=') || search.includes('reference=')))
+    ) {
+      return (
+        <PaymentReturnScreen 
+          onContinueToApp={() => {
+            try {
+              window.history.replaceState({}, '', '/');
+            } catch (e) {}
+            window.location.reload();
+          }}
+        />
+      );
+    }
   }
 
   // 1. Authenticated users go straight to their role-specific dashboard

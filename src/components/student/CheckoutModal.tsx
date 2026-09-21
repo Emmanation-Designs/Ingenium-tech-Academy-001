@@ -92,6 +92,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         items: checkoutItems,
       });
 
+      // Immediate redirect to the real Wittypay test checkout URL
+      if (result.checkout_url) {
+        window.location.href = result.checkout_url;
+        return;
+      }
+
       setCheckoutResult({
         orderId: result.order_id,
         orderNumber: result.order_number,

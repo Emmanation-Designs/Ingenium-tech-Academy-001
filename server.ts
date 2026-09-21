@@ -9,6 +9,7 @@ dotenv.config();
 // Handlers for Wittypay
 import createPaymentHandler from './api/wittypay/create-payment';
 import webhookHandler from './api/wittypay/webhook';
+import checkStatusHandler from './api/wittypay/check-status';
 
 async function startServer() {
   const app = express();
@@ -47,6 +48,10 @@ async function startServer() {
 
   app.post('/api/wittypay/webhook', async (req, res) => {
     await webhookHandler(req, res);
+  });
+
+  app.get('/api/wittypay/check-status', async (req, res) => {
+    await checkStatusHandler(req, res);
   });
 
   // Vite development middleware or static production serving
