@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Home, BookOpen, Layers, Clock, Inbox, Users, 
   GraduationCap, ShieldCheck, BarChart2, Settings, 
-  LogOut, X, ChevronDown, Check
+  LogOut, X, ChevronDown, Check, CreditCard
 } from 'lucide-react';
 import { Profile } from '../../types';
 import { BrandLogo } from '../common/BrandLogo';
@@ -13,6 +13,7 @@ export type AdminTab =
   | 'categories' 
   | 'times' 
   | 'requests' 
+  | 'orders'
   | 'students' 
   | 'instructors' 
   | 'enrollments' 
@@ -49,6 +50,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: Inbox, 
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined 
     },
+    { id: 'orders' as AdminTab, label: 'Wittypay Orders', icon: CreditCard },
     { id: 'students' as AdminTab, label: 'Students', icon: Users },
     { id: 'instructors' as AdminTab, label: 'Teachers', icon: GraduationCap },
     { id: 'enrollments' as AdminTab, label: 'Enrollments', icon: ShieldCheck },

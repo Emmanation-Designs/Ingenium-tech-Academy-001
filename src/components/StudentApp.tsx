@@ -5,6 +5,7 @@ import { Profile, Course, CourseSchedule, CourseSelection, Enrollment, Notificat
 import { StudentClassroom } from './student/StudentClassroom';
 import { StudentCourseDashboard } from './student/StudentCourseDashboard';
 import { CourseProgressView } from './student/CourseProgressView';
+import { CheckoutModal } from './student/CheckoutModal';
 import { BrandLogo } from './common/BrandLogo';
 import { navigateSameTab } from '../lib/navigation';
 import { 
@@ -12,7 +13,7 @@ import {
   MapPin, Clock, AlertCircle, ChevronRight, Plus, Send, Search,
   SlidersHorizontal, Trash2, Camera, HelpCircle, Info, Settings, Globe, Lock, ChevronLeft,
   Check, BarChart2, Video, Pencil, Sparkles, X, Database, Palette, Megaphone, Code, Terminal, PenTool,
-  ExternalLink
+  ExternalLink, CreditCard, ShoppingBag
 } from 'lucide-react';
 
 const getCourseImage = (course: Course) => {
@@ -166,6 +167,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   const [selectedCourseForDetails, setSelectedCourseForDetails] = useState<Course | null>(null);
   const [showClassTimeSelector, setShowClassTimeSelector] = useState(false);
   const [chosenScheduleId, setChosenScheduleId] = useState<string>('');
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [singleCourseForCheckout, setSingleCourseForCheckout] = useState<{ course: Course; scheduleId?: string; scheduleLabel?: string } | undefined>(undefined);
 
   // Course filter logic
   const filteredCourses = courses.filter(course => {
@@ -458,17 +461,39 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="p-4 sm:p-6 border-t border-[#F2F2F2] space-y-3 bg-white pb-safe">
-              <button 
-                onClick={handleSelectCourse}
-                disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
-                className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-sm font-semibold transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
-              >
-                {loading ? 'Adding...' : 'Add to My Selection'}
-              </button>
-              <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-400 font-normal">
-                <Lock className="w-3.5 h-3.5" />
-                <span>You can select multiple courses</span>
+            <div className="p-4 sm:p-6 border-t border-[#F2F2F2] space-y-2.5 bg-white pb-safe">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button 
+                  onClick={handleSelectCourse}
+                  disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
+                  className="w-full py-3.5 rounded-xl border border-[#0A9D8F] text-[#0A9D8F] hover:bg-[#E6F5F4]/60 text-xs font-semibold transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                >
+                  {loading ? 'Adding...' : 'Add to Selection'}
+                </button>
+
+                <button 
+                  onClick={() => {
+                    const sched = (schedulesMap[selectedCourseForDetails.id] || []).find(s => s.id === chosenScheduleId);
+                    setSingleCourseForCheckout({
+                      course: selectedCourseForDetails,
+                      scheduleId: chosenScheduleId || undefined,
+                      scheduleLabel: sched?.label || 'Standard Schedule'
+                    });
+                    setShowClassTimeSelector(false);
+                    setSelectedCourseForDetails(null);
+                    setShowCheckoutModal(true);
+                  }}
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Buy Now (Wittypay)</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 font-normal">
+                <Lock className="w-3 h-3 text-[#0A9D8F]" />
+                <span>Instant activation upon payment completion</span>
               </div>
             </div>
           </div>
@@ -934,10 +959,32 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               )}
             </div>
 
+            {/* Bottom Checkout / Pay Now Box for Pending Selections */}
+            {selections.some(s => s.status === 'pending') && (
+              <div className="p-4 mx-4 sm:mx-6 mb-3 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-[#087A6F]">Instant Admission with Wittypay</h4>
+                  <p className="text-[11px] text-zinc-600 mt-0.5">
+                    Pay securely with card or transfer for automatic, immediate classroom activation.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSingleCourseForCheckout(undefined);
+                    setShowCheckoutModal(true);
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Pay Now (₦{selections.filter(s => s.status === 'pending').reduce((acc, sel) => acc + (Number(sel.price_snapshot) || 120000), 0).toLocaleString()})</span>
+                </button>
+              </div>
+            )}
+
             {/* Bottom Waiting Alert Box */}
-            <div className="p-4 mx-4 sm:mx-6 mb-6 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl">
-              <p className="text-xs font-medium text-[#087A6F] text-center leading-relaxed">
-                Your course selections are waiting for admin approval. You will be notified once a course is approved.
+            <div className="p-4 mx-4 sm:mx-6 mb-6 bg-zinc-50 border border-zinc-200/70 rounded-2xl">
+              <p className="text-xs font-normal text-zinc-500 text-center leading-relaxed">
+                Courses are automatically enrolled upon completed Wittypay payment, or can be reviewed and approved by academy admins.
               </p>
             </div>
           </div>
@@ -1229,6 +1276,26 @@ export const StudentApp: React.FC<StudentAppProps> = ({
           </button>
           
         </nav>
+
+        {/* Wittypay Automatic Course Checkout Modal */}
+        {showCheckoutModal && (
+          <CheckoutModal
+            currentUser={currentUser}
+            courses={courses}
+            selections={selections}
+            singleCourse={singleCourseForCheckout}
+            onClose={() => {
+              setShowCheckoutModal(false);
+              setSingleCourseForCheckout(undefined);
+            }}
+            onSuccess={(orderId) => {
+              setShowCheckoutModal(false);
+              setSingleCourseForCheckout(undefined);
+              loadStudentData(false);
+              setActiveTab('learning');
+            }}
+          />
+        )}
 
       </div>
     </div>

@@ -5,6 +5,7 @@ import { StudentApp } from './components/StudentApp';
 import { AdminApp } from './components/AdminApp';
 import { TeacherApp } from './components/TeacherApp';
 import { TeacherInviteAccept } from './components/teacher/TeacherInviteAccept';
+import { TestPaymentGateway } from './components/student/TestPaymentGateway';
 import { dataService } from './services/dataService';
 import { Profile, UserRole } from './types';
 import { Loader2 } from 'lucide-react';
@@ -188,6 +189,11 @@ export default function App() {
         }}
       />
     );
+  }
+
+  // 0b. Wittypay Sandbox Test Payment Screen
+  if (typeof window !== 'undefined' && window.location.pathname.includes('/checkout/test-pay')) {
+    return <TestPaymentGateway />;
   }
 
   // 1. Authenticated users go straight to their role-specific dashboard

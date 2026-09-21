@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Profile, Course, CourseCategory, CourseSchedule, CourseSelection, 
-  Enrollment, TrainingMode, TeacherInvitation, TeacherCourseAssignment 
+  Enrollment, TrainingMode, TeacherInvitation, TeacherCourseAssignment,
+  Order, Payment
 } from '../types';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
@@ -16,6 +17,7 @@ import { AdminRequests } from './admin/AdminRequests';
 import { AdminStudents } from './admin/AdminStudents';
 import { AdminCategories } from './admin/AdminCategories';
 import { AdminTeachers } from './admin/AdminTeachers';
+import { AdminOrdersView } from './admin/AdminOrdersView';
 import { Plus, RefreshCw, LogOut, ShieldCheck, BarChart2, GraduationCap, Settings } from 'lucide-react';
 
 interface AdminAppProps {
@@ -54,6 +56,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   const [teachers, setTeachers] = useState<Profile[]>([]);
   const [invitations, setInvitations] = useState<TeacherInvitation[]>([]);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherCourseAssignment[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
 
   // Fetch all authoritative records from Supabase
   const loadData = useCallback(async (isBackground: boolean = false) => {
@@ -73,7 +77,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         fetchedInstructors,
         fetchedTeachers,
         fetchedInvitations,
-        fetchedAssignments
+        fetchedAssignments,
+        fetchedOrders,
+        fetchedPayments
       ] = await Promise.all([
         dataService.getCourses(),
         dataService.getCategories(),
@@ -84,7 +90,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         dataService.getInstructors(),
         dataService.getTeachers(),
         dataService.getTeacherInvitations(),
-        dataService.getTeacherAssignments()
+        dataService.getTeacherAssignments(),
+        dataService.getOrders(),
+        dataService.getPayments()
       ]);
 
       setCourses(fetchedCourses);
@@ -97,6 +105,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       setTeachers(fetchedTeachers);
       setInvitations(fetchedInvitations);
       setTeacherAssignments(fetchedAssignments);
+      setOrders(fetchedOrders);
+      setPayments(fetchedPayments);
       setLastSyncedAt(new Date());
     } catch (err) {
       console.error('Failed to load authoritative admin data:', err);
@@ -312,6 +322,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       case 'categories': return 'Categories';
       case 'times': return 'Class Times';
       case 'requests': return 'Course Requests';
+      case 'orders': return 'Wittypay Orders';
       case 'students': return 'Students';
       case 'instructors': return 'Teachers';
       case 'enrollments': return 'Enrollments';
@@ -499,6 +510,15 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                 onSelectRequest={setSelectedRequest}
                 onApprove={handleApproveSelection}
                 onReject={handleRejectSelection}
+              />
+            )}
+
+            {activeTab === 'orders' && (
+              <AdminOrdersView
+                orders={orders}
+                payments={payments}
+                onRefresh={() => loadData(true)}
+                isSyncing={isSyncing}
               />
             )}
 

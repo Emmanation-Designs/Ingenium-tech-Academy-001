@@ -131,9 +131,56 @@ export interface Payment {
   notes?: string;
   confirmed_by?: string;
   confirmed_at?: string;
+  order_id?: string;
+  wittypay_reference?: string;
+  checkout_url?: string;
+  gateway_response?: any;
+  failure_reason?: string;
   created_at: string;
   updated_at: string;
   student_name?: string;
+}
+
+export type OrderStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
+
+export interface Order {
+  id: string;
+  student_id: string;
+  order_number: string;
+  total_amount: number;
+  currency: string;
+  status: OrderStatus;
+  payment_reference?: string;
+  wittypay_reference?: string;
+  metadata?: Record<string, any>;
+  items?: OrderItem[];
+  created_at: string;
+  updated_at: string;
+  student_name?: string;
+  student_email?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  course_id: string;
+  schedule_id?: string;
+  selection_id?: string;
+  course_title: string;
+  schedule_label?: string;
+  unit_price: number;
+  currency: string;
+  created_at: string;
+}
+
+export interface WittypayInitiateResponse {
+  success: boolean;
+  order_id: string;
+  order_number: string;
+  reference: string;
+  checkout_url: string;
+  amount: number;
+  currency: string;
 }
 
 export interface ClassSession {

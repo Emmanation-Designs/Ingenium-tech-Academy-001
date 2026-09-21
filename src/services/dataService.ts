@@ -4,7 +4,8 @@ import { learningService } from './learningService';
 import { 
   Profile, Course, CourseSchedule, CourseSelection, 
   Enrollment, Payment, UserRole, SelectionStatus, PaymentStatus, EnrollmentStatus,
-  CourseCategory, CoursePricing, TeacherInvitation, TeacherCourseAssignment, ClassSession
+  CourseCategory, CoursePricing, TeacherInvitation, TeacherCourseAssignment, ClassSession,
+  Order, OrderItem
 } from '../types';
 
 // ====================================================================
@@ -1107,8 +1108,15 @@ export const dataService = {
 
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
-          console.error('[Supabase] Error fetching payments:', error.message);
-          return [];
+          // Fallback to flat query if join fails
+          let flatQuery = supabase.from('payments').select('*');
+          if (studentId) flatQuery = flatQuery.eq('student_id', studentId);
+          const { data: flatData, error: flatErr } = await flatQuery.order('created_at', { ascending: false });
+          if (flatErr) {
+            console.error('[Supabase] Error fetching payments:', flatErr.message);
+            return [];
+          }
+          return flatData as Payment[];
         }
 
         return ((data || []) as any[]).map(p => ({
@@ -1117,6 +1125,46 @@ export const dataService = {
         }));
       } catch (e) {
         console.error('[Supabase] Exception in getPayments:', e);
+        return [];
+      }
+    }
+  },
+
+  // 8b. ORDERS (Wittypay course purchases)
+  orders: {
+    async getOrders(studentId?: string): Promise<Order[]> {
+      if (!isSupabaseConfigured || !supabase) return [];
+      try {
+        let query = supabase
+          .from('orders')
+          .select(`
+            *,
+            student:profiles!student_id(email, full_name),
+            items:order_items(*)
+          `);
+
+        if (studentId) {
+          query = query.eq('student_id', studentId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) {
+          console.warn('[Supabase] Orders join failed, falling back to flat orders:', error.message);
+          let flatQuery = supabase.from('orders').select('*');
+          if (studentId) flatQuery = flatQuery.eq('student_id', studentId);
+          const { data: flatOrders, error: flatErr } = await flatQuery.order('created_at', { ascending: false });
+          if (flatErr) return [];
+          return flatOrders as Order[];
+        }
+
+        return (data || []).map((o: any) => ({
+          ...o,
+          student_email: o.student?.email,
+          student_name: o.student?.full_name,
+          items: o.items || []
+        })) as Order[];
+      } catch (e) {
+        console.error('[Supabase] Exception in getOrders:', e);
         return [];
       }
     }
@@ -2017,6 +2065,12 @@ export const dataService = {
     timezone?: string;
   }) {
     return dataService.teachers.saveTeacherClassDetails(params);
+  },
+  getOrders(studentId?: string): Promise<Order[]> {
+    return dataService.orders.getOrders(studentId);
+  },
+  getPayments(studentId?: string): Promise<Payment[]> {
+    return dataService.payments.getPayments(studentId);
   },
   learning: learningService
 };
