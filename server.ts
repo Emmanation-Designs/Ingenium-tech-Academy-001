@@ -11,6 +11,11 @@ import createPaymentHandler from './api/wittypay/create-payment';
 import webhookHandler from './api/wittypay/webhook';
 import checkStatusHandler from './api/wittypay/check-status';
 
+// Handlers for PayPal Live Checkout
+import paypalCreateOrderHandler from './api/paypal/create-order';
+import paypalCaptureOrderHandler from './api/paypal/capture-order';
+import paypalCheckStatusHandler from './api/paypal/check-status';
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -52,6 +57,23 @@ async function startServer() {
 
   app.get('/api/wittypay/check-status', async (req, res) => {
     await checkStatusHandler(req, res);
+  });
+
+  // PayPal API Routes (Live Checkout for USD and EUR)
+  app.post('/api/paypal/create-order', async (req, res) => {
+    await paypalCreateOrderHandler(req, res);
+  });
+
+  app.post('/api/paypal/capture-order', async (req, res) => {
+    await paypalCaptureOrderHandler(req, res);
+  });
+
+  app.get('/api/paypal/capture-order', async (req, res) => {
+    await paypalCaptureOrderHandler(req, res);
+  });
+
+  app.get('/api/paypal/check-status', async (req, res) => {
+    await paypalCheckStatusHandler(req, res);
   });
 
   // Vite development middleware or static production serving

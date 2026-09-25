@@ -191,14 +191,14 @@ export default function App() {
     );
   }
 
-  // 0b. Wittypay Payment Return Route (Displays verification status, does NOT self-fulfill)
+  // 0b. Payment Return Route (Displays verification status, does NOT self-fulfill)
   if (typeof window !== 'undefined') {
     const path = window.location.pathname;
     const search = window.location.search;
     if (
       path.includes('/payment/callback') || 
       path.includes('/payment/return') || 
-      (search.includes('order_id=') && (search.includes('ref=') || search.includes('reference=')))
+      (search.includes('order_id=') && (search.includes('ref=') || search.includes('reference=') || search.includes('token=') || search.includes('gateway=')))
     ) {
       return (
         <PaymentReturnScreen 

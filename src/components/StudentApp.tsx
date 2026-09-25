@@ -6,6 +6,7 @@ import { StudentClassroom } from './student/StudentClassroom';
 import { StudentCourseDashboard } from './student/StudentCourseDashboard';
 import { CourseProgressView } from './student/CourseProgressView';
 import { CheckoutModal } from './student/CheckoutModal';
+import { determinePaymentRouting, getCoursePriceForCountry } from '../utils/paymentRouting';
 import { BrandLogo } from './common/BrandLogo';
 import { navigateSameTab } from '../lib/navigation';
 import { 
@@ -247,37 +248,23 @@ export const StudentApp: React.FC<StudentAppProps> = ({
     };
   }, [currentUser.id]);
 
+  const gatewayRouting = useMemo(() => {
+    return determinePaymentRouting(currentUser.country);
+  }, [currentUser.country]);
+
   const getCoursePriceAndCurrency = (course: Course) => {
-    const countryUpper = (currentUser.country || '').trim().toUpperCase();
-    const pricing = course.pricing;
-
-    const eurozoneCountries = [
-      'AUSTRIA', 'BELGIUM', 'CROATIA', 'CYPRUS', 'ESTONIA', 'FINLAND', 'FRANCE', 'GERMANY', 
-      'GREECE', 'IRELAND', 'ITALY', 'LATVIA', 'LITHUANIA', 'LUXEMBOURG', 'MALTA', 'NETHERLANDS', 
-      'PORTUGAL', 'SLOVAKIA', 'SLOVENIA', 'SPAIN', 'ANDORRA', 'MONACO', 'SAN MARINO', 'VATICAN CITY',
-      'MONTENEGRO', 'KOSOVO', 'EUROPE', 'EUROZONE', 'EU'
-    ];
-
-    if (countryUpper === 'NIGERIA' || countryUpper === 'NG') {
-      return {
-        price: pricing?.ngn_price ?? 200000,
-        currency: 'NGN',
-        symbol: '₦'
-      };
-    } else if (eurozoneCountries.includes(countryUpper)) {
-      return {
-        price: pricing?.eur_price ?? 400,
-        currency: 'EUR',
-        symbol: '€'
-      };
-    } else {
-      return {
-        price: pricing?.usd_price ?? 400,
-        currency: 'USD',
-        symbol: '$'
-      };
-    }
+    return getCoursePriceForCountry(course, currentUser.country);
   };
+
+  const pendingTotal = useMemo(() => {
+    return selections
+      .filter(s => s.status === 'pending')
+      .reduce((acc, sel) => {
+        const c = courses.find(course => course.id === sel.course_id);
+        const p = getCoursePriceForCountry(c, currentUser.country);
+        return acc + p.price;
+      }, 0);
+  }, [selections, courses, currentUser.country]);
 
   const handleSelectCourse = async () => {
     if (!selectedCourseForDetails) return;
@@ -487,7 +474,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
-                  <span>Buy Now (Wittypay)</span>
+                  <span>Buy Now ({gatewayRouting.gatewayName})</span>
                 </button>
               </div>
 
@@ -963,9 +950,9 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             {selections.some(s => s.status === 'pending') && (
               <div className="p-4 mx-4 sm:mx-6 mb-3 bg-[#E6F5F4] border border-[#0A9D8F]/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-xs font-bold text-[#087A6F]">Instant Admission with Wittypay</h4>
+                  <h4 className="text-xs font-bold text-[#087A6F]">Instant Admission with {gatewayRouting.gatewayName}</h4>
                   <p className="text-[11px] text-zinc-600 mt-0.5">
-                    Pay securely with card or transfer for automatic, immediate classroom activation.
+                    Pay securely with {gatewayRouting.gatewayName === 'Wittypay' ? 'card or transfer' : 'PayPal or card'} for automatic, immediate classroom activation.
                   </p>
                 </div>
                 <button
@@ -976,7 +963,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
-                  <span>Pay Now (₦{selections.filter(s => s.status === 'pending').reduce((acc, sel) => acc + (Number(sel.price_snapshot) || 120000), 0).toLocaleString()})</span>
+                  <span>Pay Now ({gatewayRouting.symbol}{pendingTotal.toLocaleString()})</span>
                 </button>
               </div>
             )}
@@ -984,7 +971,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             {/* Bottom Waiting Alert Box */}
             <div className="p-4 mx-4 sm:mx-6 mb-6 bg-zinc-50 border border-zinc-200/70 rounded-2xl">
               <p className="text-xs font-normal text-zinc-500 text-center leading-relaxed">
-                Courses are automatically enrolled upon completed Wittypay payment, or can be reviewed and approved by academy admins.
+                Courses are automatically enrolled upon completed payment, or can be reviewed and approved by academy admins.
               </p>
             </div>
           </div>

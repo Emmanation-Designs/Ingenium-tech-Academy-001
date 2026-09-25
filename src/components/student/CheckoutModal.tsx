@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Course, CourseSchedule, CourseSelection, Profile } from '../../types';
 import { wittypayService } from '../../services/wittypayService';
+import { paypalService } from '../../services/paypalService';
+import { determinePaymentRouting, getCoursePriceForCountry } from '../../utils/paymentRouting';
 import { 
   CreditCard, ShieldCheck, Check, AlertCircle, Loader2, 
   ChevronLeft, ExternalLink, Lock, CheckCircle2, ArrowRight
@@ -35,20 +37,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     orderNumber: string;
     checkoutUrl: string;
     amount: number;
+    currency: string;
+    gateway: string;
   } | null>(null);
+
+  // Authoritatively determine currency and gateway based on student country
+  const routing = React.useMemo(() => {
+    return determinePaymentRouting(currentUser.country);
+  }, [currentUser.country]);
 
   // Prepare items for checkout (either single course or all pending selections)
   const checkoutItems = React.useMemo(() => {
     if (singleCourse) {
-      const pricing = singleCourse.course.pricing;
-      const unitPrice = pricing?.ngn_price ? Number(pricing.ngn_price) : 120000;
+      const priceInfo = getCoursePriceForCountry(singleCourse.course, currentUser.country);
       return [{
         courseId: singleCourse.course.id,
         scheduleId: singleCourse.scheduleId,
         courseTitle: singleCourse.course.title,
         scheduleLabel: singleCourse.scheduleLabel || 'Standard Schedule',
-        unitPrice,
-        currency: 'NGN'
+        unitPrice: priceInfo.price,
+        currency: priceInfo.currency
       }];
     }
 
@@ -56,10 +64,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const pending = selections.filter(s => s.status === 'pending');
     return pending.map(sel => {
       const c = courses.find(course => course.id === sel.course_id);
-      const pricing = c?.pricing;
-      const unitPrice = pricing?.ngn_price 
-        ? Number(pricing.ngn_price) 
-        : (sel.price_snapshot && sel.currency_snapshot === 'NGN' ? Number(sel.price_snapshot) : 120000);
+      const priceInfo = getCoursePriceForCountry(c, currentUser.country);
+      
+      // If selection already has snapshot in matching currency, prefer it, else use authoritative course price
+      let unitPrice = priceInfo.price;
+      if (sel.price_snapshot && sel.currency_snapshot === routing.currency) {
+        unitPrice = Number(sel.price_snapshot);
+      }
 
       return {
         courseId: sel.course_id,
@@ -68,10 +79,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         courseTitle: sel.course_title || c?.title || 'Selected Course',
         scheduleLabel: sel.schedule_label || 'Standard Schedule',
         unitPrice,
-        currency: 'NGN'
+        currency: routing.currency
       };
     });
-  }, [singleCourse, selections, courses]);
+  }, [singleCourse, selections, courses, currentUser.country, routing.currency]);
 
   const totalAmount = checkoutItems.reduce((acc, item) => acc + item.unitPrice, 0);
 
@@ -85,14 +96,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setLoading(true);
       setError(null);
 
-      const result = await wittypayService.initiateCheckout({
-        studentId: currentUser.id,
-        studentEmail: currentUser.email,
-        studentName: currentUser.full_name,
-        items: checkoutItems,
-      });
+      let result;
+      if (routing.gateway === 'wittypay') {
+        result = await wittypayService.initiateCheckout({
+          studentId: currentUser.id,
+          studentEmail: currentUser.email,
+          studentName: currentUser.full_name,
+          items: checkoutItems,
+        });
+      } else {
+        result = await paypalService.initiateCheckout({
+          studentId: currentUser.id,
+          studentEmail: currentUser.email,
+          studentName: currentUser.full_name,
+          items: checkoutItems,
+        });
+      }
 
-      // Immediate redirect to the real Wittypay test checkout URL
+      // Immediate redirect to the real hosted checkout URL (Wittypay or PayPal)
       if (result.checkout_url) {
         window.location.href = result.checkout_url;
         return;
@@ -102,12 +123,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         orderId: result.order_id,
         orderNumber: result.order_number,
         checkoutUrl: result.checkout_url,
-        amount: result.amount
+        amount: result.amount,
+        currency: result.currency,
+        gateway: routing.gatewayName
       });
 
     } catch (err: any) {
-      console.error('[Checkout] Error initiating payment:', err);
-      setError(err.message || 'Unable to start checkout with Wittypay. Please try again.');
+      console.error(`[Checkout] Error initiating payment with ${routing.gatewayName}:`, err);
+      setError(err.message || `Unable to start checkout with ${routing.gatewayName}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -115,7 +138,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleProceedToGateway = () => {
     if (checkoutResult?.checkoutUrl) {
-      // Open checkout URL in new window or redirect
       window.location.href = checkoutResult.checkoutUrl;
     }
   };
@@ -161,10 +183,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-zinc-900">Order #{checkoutResult.orderNumber} Created</h3>
                 <p className="text-xs text-zinc-500">
-                  Total Payable: <strong className="text-zinc-900 font-bold">₦{checkoutResult.amount.toLocaleString()} NGN</strong>
+                  Total Payable: <strong className="text-zinc-900 font-bold">{routing.symbol}{checkoutResult.amount.toLocaleString()} {checkoutResult.currency}</strong>
                 </p>
                 <p className="text-[11px] text-zinc-400 mt-1 max-w-sm mx-auto">
-                  Click below to proceed to the secure Wittypay payment gateway. Your admission and classroom access will activate automatically upon payment confirmation.
+                  Click below to proceed to the secure {checkoutResult.gateway} payment gateway. Your admission and classroom access will activate automatically upon payment confirmation.
                 </p>
               </div>
 
@@ -173,7 +195,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   onClick={handleProceedToGateway}
                   className="w-full py-3.5 px-4 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-semibold text-sm transition-all shadow-sm active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Pay Now with Wittypay</span>
+                  <span>Pay Now with {checkoutResult.gateway}</span>
                   <ExternalLink className="w-4 h-4" />
                 </button>
               </div>
@@ -195,7 +217,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <p className="text-[11px] text-zinc-400 mt-0.5">{item.scheduleLabel}</p>
                       </div>
                       <div className="text-right font-bold text-[#0A9D8F]">
-                        ₦{item.unitPrice.toLocaleString()}
+                        {routing.symbol}{item.unitPrice.toLocaleString()}
                       </div>
                     </div>
                   ))}
@@ -205,12 +227,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {/* Total Summary */}
               <div className="p-4 bg-[#E6F5F4]/60 border border-[#0A9D8F]/20 rounded-2xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-semibold text-zinc-700 block">Total Due (NGN)</span>
-                  <span className="text-[10px] text-zinc-400">Wittypay processes in Nigerian Naira (NGN)</span>
+                  <span className="text-xs font-semibold text-zinc-700 block">Total Due ({routing.currency})</span>
+                  <span className="text-[10px] text-zinc-400">
+                    {routing.gatewayName === 'Wittypay' 
+                      ? 'Wittypay processes in Nigerian Naira (NGN)' 
+                      : routing.currency === 'EUR' 
+                        ? 'PayPal processes in Euros (EUR)' 
+                        : 'PayPal processes in US Dollars (USD)'}
+                  </span>
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-black text-[#087A6F]">
-                    ₦{totalAmount.toLocaleString()}
+                    {routing.symbol}{totalAmount.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -227,7 +255,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Gateway:</span>
-                  <span className="font-semibold text-zinc-800">Wittypay Automatic Checkout</span>
+                  <span className="font-semibold text-zinc-800">
+                    {routing.gateway === 'wittypay' ? 'Wittypay Automatic Checkout' : 'PayPal Live Checkout'}
+                  </span>
                 </div>
               </div>
 
@@ -245,7 +275,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Proceed to Wittypay Payment</span>
+                    <span>Proceed to {routing.gatewayName} Payment</span>
                   </>
                 )}
               </button>

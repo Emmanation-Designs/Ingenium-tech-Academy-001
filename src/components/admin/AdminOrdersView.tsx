@@ -28,7 +28,9 @@ export const AdminOrdersView: React.FC<AdminOrdersViewProps> = ({
         (o.order_number || '').toLowerCase().includes(search.toLowerCase()) ||
         (o.student_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (o.student_email || '').toLowerCase().includes(search.toLowerCase()) ||
-        (o.wittypay_reference || '').toLowerCase().includes(search.toLowerCase())
+        (o.payment_reference || '').toLowerCase().includes(search.toLowerCase()) ||
+        (o.wittypay_reference || '').toLowerCase().includes(search.toLowerCase()) ||
+        (o.paypal_order_id || '').toLowerCase().includes(search.toLowerCase())
       );
 
     const matchesStatus = statusFilter === 'all' ? true : o.status === statusFilter;
@@ -168,7 +170,7 @@ export const AdminOrdersView: React.FC<AdminOrdersViewProps> = ({
                 <div className="text-right shrink-0 flex items-center gap-3">
                   <div>
                     <span className="text-xs font-black text-gray-950 block">
-                      ₦{Number(order.total_amount).toLocaleString()} {order.currency}
+                      {order.currency === 'USD' ? '$' : order.currency === 'EUR' ? '€' : '₦'}{Number(order.total_amount).toLocaleString()} {order.currency}
                     </span>
                     <span className="text-[10px] text-gray-400">
                       {new Date(order.created_at).toLocaleDateString()}

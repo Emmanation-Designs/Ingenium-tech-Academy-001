@@ -133,6 +133,8 @@ export interface Payment {
   confirmed_at?: string;
   order_id?: string;
   wittypay_reference?: string;
+  paypal_order_id?: string;
+  paypal_capture_id?: string;
   checkout_url?: string;
   gateway_response?: any;
   failure_reason?: string;
@@ -150,8 +152,10 @@ export interface Order {
   total_amount: number;
   currency: string;
   status: OrderStatus;
+  payment_method?: string;
   payment_reference?: string;
   wittypay_reference?: string;
+  paypal_order_id?: string;
   metadata?: Record<string, any>;
   items?: OrderItem[];
   created_at: string;
@@ -173,7 +177,7 @@ export interface OrderItem {
   created_at: string;
 }
 
-export interface WittypayInitiateResponse {
+export interface CheckoutInitiateResponse {
   success: boolean;
   order_id: string;
   order_number: string;
@@ -181,7 +185,11 @@ export interface WittypayInitiateResponse {
   checkout_url: string;
   amount: number;
   currency: string;
+  gateway?: 'wittypay' | 'paypal';
+  paypal_order_id?: string;
 }
+
+export type WittypayInitiateResponse = CheckoutInitiateResponse;
 
 export interface ClassSession {
   id: string;
