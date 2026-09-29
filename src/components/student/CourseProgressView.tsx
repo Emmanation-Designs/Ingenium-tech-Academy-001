@@ -336,14 +336,14 @@ export const CourseProgressView: React.FC<CourseProgressViewProps> = ({
   const strokeDashoffset = circumference - (overallPercentage / 100) * circumference;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F8FAFC] min-h-[calc(100vh-65px)] pb-16">
+    <div className="flex-1 flex flex-col bg-[#F8FAFC] overflow-hidden h-full">
       
       {/* 
         Clean Header: As explicitly requested by the user, 
         we ignore the logo, profile photo, and notification bell icon!
-        Clean title with subtle back action.
+        Clean title with subtle back action. Pinned with pt-safe.
       */}
-      <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+      <div className="px-5 py-3.5 bg-white/95 backdrop-blur-md border-b border-slate-100 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] pt-safe shrink-0">
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}
@@ -368,6 +368,9 @@ export const CourseProgressView: React.FC<CourseProgressViewProps> = ({
           <span>Active Student</span>
         </div>
       </div>
+
+      {/* Scrollable Progress Area */}
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-28">
 
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12">
@@ -855,6 +858,7 @@ export const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
         </div>
       )}
+      </div>
 
     </div>
   );

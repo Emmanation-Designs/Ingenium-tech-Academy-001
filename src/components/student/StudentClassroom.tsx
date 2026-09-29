@@ -374,25 +374,27 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
   // MAIN CLASSROOM VIEW (Header + Live / Upcoming / No Class States)
   // =========================================================================
   return (
-    <div className="flex-1 flex flex-col bg-white min-h-[calc(100vh-60px)]">
+    <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
       
-      {/* Top Header with Brand Logo */}
-      <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 pt-safe">
+      {/* Top Header with Brand Logo - Pinned at top with pt-safe */}
+      <div className="px-4 sm:px-6 py-3.5 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-30 pt-safe shrink-0">
         <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
         <button className="p-2 rounded-full hover:bg-zinc-100 transition relative">
           <Bell className="w-4 h-4 text-zinc-800" />
         </button>
       </div>
 
-      {/* Classroom Title Section */}
-      <div className="px-4 sm:px-6 pt-5 pb-2">
-        <h1 className="text-xl font-extrabold tracking-tight text-zinc-900">
-          My Classroom
-        </h1>
-        <p className="text-xs text-zinc-500 font-medium mt-0.5">
-          Your live classes, recordings and learning sessions
-        </p>
-      </div>
+      {/* Scrollable Classroom Content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-28">
+        {/* Classroom Title Section */}
+        <div className="px-4 sm:px-6 pt-5 pb-2">
+          <h1 className="text-xl font-extrabold tracking-tight text-zinc-900">
+            My Classroom
+          </h1>
+          <p className="text-xs text-zinc-500 font-medium mt-0.5">
+            Your live classes, recordings and learning sessions
+          </p>
+        </div>
 
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12">
@@ -669,6 +671,7 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
 
         </div>
       )}
+      </div>
 
       {/* SCHEDULE MODAL (Shows Real Approved Schedules) */}
       {showScheduleModal && (

@@ -240,7 +240,7 @@ export default function App() {
     }
 
     return (
-      <div className={`min-h-screen ${theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white'} selection:bg-[#0A9D8F]/20 font-sans`}>
+      <div className={`h-[100dvh] max-h-[100dvh] overflow-hidden ${theme === 'light' ? 'bg-[#f8fafc] text-zinc-900' : 'bg-zinc-950 text-white'} selection:bg-[#0A9D8F]/20 font-sans`}>
         <StudentApp 
           currentUser={currentUser} 
           onLogout={handleLogout}

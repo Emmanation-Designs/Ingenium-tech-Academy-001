@@ -630,10 +630,10 @@ export const StudentApp: React.FC<StudentAppProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9] text-[#111111] font-sans pb-24 selection:bg-[#0A9D8F]/30">
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#F9F9F9] text-[#111111] font-sans selection:bg-[#0A9D8F]/30 overflow-hidden flex flex-col">
       
-      {/* Responsive App Container */}
-      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto bg-white min-h-screen shadow-sm sm:shadow-lg relative flex flex-col justify-between border-x border-[#0A9D8F]/20">
+      {/* Responsive App Container - Locked viewport, never page scrolls */}
+      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto bg-white h-full max-h-[100dvh] shadow-sm sm:shadow-lg relative flex flex-col border-x border-[#0A9D8F]/20 overflow-hidden">
         
         {/* Global Floating Toast for Favorites & Feedback */}
         {favoriteToast && (
@@ -1010,9 +1010,9 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* MAIN TAB 1: HOME / DISCOVERY */}
         {activeTab === 'home' && (
-          <div className="flex-1 flex flex-col bg-white">
-            {/* Header branding row */}
-            <div className="px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#F5F5F5] pt-safe">
+          <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
+            {/* Header branding row - Pinned at top with pt-safe */}
+            <div className="px-4 sm:px-6 py-3.5 flex items-center justify-between border-b border-[#F5F5F5] pt-safe sticky top-0 z-30 bg-white/95 backdrop-blur-md shrink-0">
               <BrandLogo size="sm" showText={true} showSubtitle={true} variant="dark" />
 
               {/* Notification bell */}
@@ -1030,7 +1030,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             </div>
 
             {/* Scrollable home area */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-6 pb-28">
               
               {/* Greetings */}
               <div className="space-y-1">
@@ -1570,14 +1570,14 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* MAIN TAB 3: MY LEARNING */}
         {activeTab === 'learning' && (
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between pt-safe">
+          <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
+            <div className="px-4 sm:px-6 py-3.5 border-b border-[#F5F5F5] flex items-center justify-between pt-safe sticky top-0 z-30 bg-white/95 backdrop-blur-md shrink-0">
               <h1 className="text-base font-semibold text-zinc-900">My Learning</h1>
               <BrandLogo size="xs" />
             </div>
 
             {/* List of active courses */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 pb-28">
               {enrollments.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 pt-20">
                   {/* Official Ingenium Brand Logo with soft green frame */}
@@ -1675,85 +1675,91 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* MAIN TAB 4: PROFILE */}
         {activeTab === 'profile' && (
-          <div className="flex-1 flex flex-col bg-white">
+          <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
             
-            {/* Elegant Solid green top card */}
-            <div className="bg-[#0A9D8F] p-6 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs pt-safe">
-              <h2 className="text-sm font-semibold uppercase tracking-wider">Student Profile</h2>
-              
-              {/* Hidden file input for avatar selection */}
-              <input
-                type="file"
-                ref={avatarInputRef}
-                onChange={handleAvatarFileSelect}
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                disabled={isUploadingAvatar}
-              />
-
-              {/* User photo matching Screen 6 */}
-              <div className="relative w-20 h-20 mx-auto">
-                <div 
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  className="w-full h-full rounded-full border-3 border-white overflow-hidden bg-white shadow-xs flex items-center justify-center cursor-pointer group relative"
-                  title="Click to change profile picture"
-                >
-                  <img 
-                    src={currentUser.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"} 
-                    alt={currentUser.full_name || 'Profile'}
-                    className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-40' : 'group-hover:opacity-90'}`}
-                    referrerPolicy="no-referrer"
-                  />
-                  {isUploadingAvatar ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Camera className="w-5 h-5 text-white drop-shadow" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Green pencil edit button on lower right */}
-                <button 
-                  type="button"
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  disabled={isUploadingAvatar}
-                  title="Upload profile picture"
-                  aria-label="Upload profile picture"
-                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#0A9D8F] text-white shadow-sm border-2 border-white hover:scale-110 active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
-                >
-                  {isUploadingAvatar ? (
-                    <div className="w-3 h-3 border-1.5 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Pencil className="w-3 h-3 stroke-[2.5]" />
-                  )}
-                </button>
-              </div>
-
-              {/* Toast message if uploaded or error */}
-              {avatarToast && (
-                <div className={`text-xs px-3.5 py-1.5 rounded-xl font-medium max-w-xs mx-auto animate-in fade-in duration-200 ${
-                  avatarToast.type === 'success' 
-                    ? 'bg-white/20 text-white backdrop-blur-xs border border-white/30' 
-                    : 'bg-red-500 text-white shadow-xs'
-                }`}>
-                  {avatarToast.message}
-                </div>
-              )}
-
-              {/* Identity labels */}
-              <div className="space-y-0.5">
-                <h3 className="text-base font-semibold tracking-tight text-white">
-                  {formatCapitalizedName(currentUser.full_name || currentUser.email, 'Student')}
-                </h3>
-                <p className="text-xs text-emerald-100 font-normal">{currentUser.email}</p>
-              </div>
+            {/* Pinned Top Header Bar with Safe Area - Never scrolls off screen */}
+            <div className="bg-[#0A9D8F] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between pt-safe sticky top-0 z-30 shrink-0 shadow-xs">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-50">Student Profile</span>
+              <BrandLogo size="xs" variant="light" />
             </div>
 
-            {/* Read-Only demographic card details (matching Screen 6) */}
-            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+            {/* Scrollable Profile Content */}
+            <div className="flex-1 overflow-y-auto overscroll-contain pb-28">
+              {/* Green Header Banner with Avatar & Identity */}
+              <div className="bg-[#0A9D8F] px-6 pb-6 pt-1 text-white text-center rounded-b-[32px] space-y-3.5 shadow-xs">
+                {/* Hidden file input for avatar selection */}
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  onChange={handleAvatarFileSelect}
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
+
+                {/* User photo matching Screen 6 */}
+                <div className="relative w-20 h-20 mx-auto">
+                  <div 
+                    onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                    className="w-full h-full rounded-full border-3 border-white overflow-hidden bg-white shadow-xs flex items-center justify-center cursor-pointer group relative"
+                    title="Click to change profile picture"
+                  >
+                    <img 
+                      src={currentUser.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"} 
+                      alt={currentUser.full_name || 'Profile'}
+                      className={`w-full h-full object-cover transition-opacity ${isUploadingAvatar ? 'opacity-40' : 'group-hover:opacity-90'}`}
+                      referrerPolicy="no-referrer"
+                    />
+                    {isUploadingAvatar ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-white drop-shadow" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Green pencil edit button on lower right */}
+                  <button 
+                    type="button"
+                    onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    title="Upload profile picture"
+                    aria-label="Upload profile picture"
+                    className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#0A9D8F] text-white shadow-sm border-2 border-white hover:scale-110 active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploadingAvatar ? (
+                      <div className="w-3 h-3 border-1.5 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Pencil className="w-3 h-3 stroke-[2.5]" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Toast message if uploaded or error */}
+                {avatarToast && (
+                  <div className={`text-xs px-3.5 py-1.5 rounded-xl font-medium max-w-xs mx-auto animate-in fade-in duration-200 ${
+                    avatarToast.type === 'success' 
+                      ? 'bg-white/20 text-white backdrop-blur-xs border border-white/30' 
+                      : 'bg-red-500 text-white shadow-xs'
+                  }`}>
+                    {avatarToast.message}
+                  </div>
+                )}
+
+                {/* Identity labels */}
+                <div className="space-y-0.5">
+                  <h3 className="text-base font-semibold tracking-tight text-white">
+                    {formatCapitalizedName(currentUser.full_name || currentUser.email, 'Student')}
+                  </h3>
+                  <p className="text-xs text-emerald-100 font-normal">{currentUser.email}</p>
+                </div>
+              </div>
+
+              {/* Read-Only demographic card details (matching Screen 6) */}
+              <div className="p-6 space-y-5">
               <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden divide-y divide-[#F5F5F5] shadow-xs">
                 <div className="p-3.5 flex items-center justify-between text-xs">
                   <span className="font-normal text-zinc-500">Country</span>
@@ -1875,10 +1881,11 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
             </div>
           </div>
+        </div>
         )}
 
-        {/* STICKY BOTTOM TASKBAR - Matching 5 tabs of the reference UI */}
-        <nav className="sticky bottom-0 bg-white border-t border-[#0A9D8F]/20 py-2 px-4 pb-safe flex items-center justify-between z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+        {/* FIXED BOTTOM TASKBAR - Pinned permanently to device bottom with pb-safe, never scrolls up */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/98 backdrop-blur-md border-t border-[#0A9D8F]/20 py-2 px-4 pb-safe flex items-center justify-between shadow-[0_-4px_16px_rgba(0,0,0,0.06)] max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto">
           
           <button
             onClick={() => {
