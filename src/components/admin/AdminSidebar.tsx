@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Profile } from '../../types';
 import { BrandLogo } from '../common/BrandLogo';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 export type AdminTab = 
   | 'dashboard' 
@@ -102,11 +103,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="p-4 mx-3 my-3 bg-gray-50/80 rounded-2xl border border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#0A9D8F]/15 border border-[#0A9D8F]/30 flex items-center justify-center text-[#0A9D8F] font-bold text-sm">
-              {currentUser.full_name?.charAt(0).toUpperCase() || 'A'}
+              {formatCapitalizedName(currentUser.full_name || currentUser.email, 'Admin').charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
               <p className="text-xs font-bold text-gray-900 truncate max-w-[130px]">
-                {currentUser.full_name || 'Admin User'}
+                {formatCapitalizedName(currentUser.full_name || currentUser.email, 'Admin User')}
               </p>
               <p className="text-[11px] text-gray-500 font-medium">
                 {currentUser.role === 'admin' ? 'Super Admin' : 'Admin'}

@@ -5,6 +5,7 @@ import { dataService } from '../../services/dataService';
 import { realtimeSync } from '../../services/realtimeSync';
 import { BrandLogo } from '../common/BrandLogo';
 import { navigateSameTab } from '../../lib/navigation';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 import { ClassRecordingView } from './ClassRecordingView';
 import { LessonContentView } from './LessonContentView';
 import { QuizStudentView } from './QuizStudentView';
@@ -160,7 +161,9 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
           let teacherName = 'Assigned Instructor';
           if (session.teacher_id) {
             const profile = await dataService.auth.getProfileForUser(session.teacher_id);
-            if (profile?.full_name) teacherName = profile.full_name;
+            if (profile?.full_name || profile?.email) {
+              teacherName = formatCapitalizedName(profile.full_name || profile.email, 'Assigned Instructor');
+            }
           }
 
           // Resolve meeting URL
@@ -202,7 +205,9 @@ export const StudentClassroom: React.FC<StudentClassroomProps> = ({
         let teacherName = 'Assigned Instructor';
         if (earliest.session.teacher_id) {
           const profile = await dataService.auth.getProfileForUser(earliest.session.teacher_id);
-          if (profile?.full_name) teacherName = profile.full_name;
+          if (profile?.full_name || profile?.email) {
+            teacherName = formatCapitalizedName(profile.full_name || profile.email, 'Assigned Instructor');
+          }
         }
 
         setActiveUpcomingSession({

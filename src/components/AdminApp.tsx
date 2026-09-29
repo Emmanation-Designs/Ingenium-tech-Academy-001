@@ -18,6 +18,7 @@ import { AdminStudents } from './admin/AdminStudents';
 import { AdminCategories } from './admin/AdminCategories';
 import { AdminTeachers } from './admin/AdminTeachers';
 import { AdminOrdersView } from './admin/AdminOrdersView';
+import { formatCapitalizedName } from '../utils/nameFormatter';
 import { AdminBroadcastMessages } from './admin/AdminBroadcastMessages';
 import { NotificationCenterModal } from './common/NotificationCenterModal';
 import { Plus, RefreshCw, LogOut, ShieldCheck, BarChart2, GraduationCap, Settings } from 'lucide-react';
@@ -640,7 +641,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
 
                   <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-gray-900">{currentUser.full_name}</p>
+                      <p className="text-xs font-bold text-gray-900">{formatCapitalizedName(currentUser.full_name || currentUser.email, 'Admin')}</p>
                       <p className="text-[11px] text-gray-500">{currentUser.email}</p>
                       <span className="text-[10px] font-bold text-[#0A9D8F] uppercase tracking-wider">
                         {currentUser.role}

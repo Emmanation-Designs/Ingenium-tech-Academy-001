@@ -7,6 +7,7 @@ import {
 import { Profile, Course } from '../../types';
 import { dataService } from '../../services/dataService';
 import { LinkifiedText, normalizeUrl } from '../../utils/linkUtils';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface TeacherClassItem {
   course: Course;
@@ -121,7 +122,7 @@ export const TeacherMessages: React.FC<TeacherMessagesProps> = ({
       const res = await dataService.notifications.send({
         senderId: currentUser.id,
         senderRole: 'teacher',
-        senderName: currentUser.full_name || 'Class Instructor',
+        senderName: formatCapitalizedName(currentUser.full_name || currentUser.email, 'Class Instructor'),
         title: title.trim(),
         message: message.trim(),
         link: actionLink.trim() ? normalizeUrl(actionLink.trim()) : undefined,
@@ -439,7 +440,7 @@ export const TeacherMessages: React.FC<TeacherMessagesProps> = ({
                     title="New unread message indicator"
                   />
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
-                    Instructor: {currentUser.full_name || 'Instructor'}
+                    Instructor: {formatCapitalizedName(currentUser.full_name || currentUser.email, 'Instructor')}
                   </span>
                   <span className="text-[10px] font-medium text-gray-400 capitalize">
                     • {category.replace('_', ' ')}

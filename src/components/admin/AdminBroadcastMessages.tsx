@@ -7,6 +7,7 @@ import {
 import { Profile, Course, Enrollment, CourseSelection } from '../../types';
 import { dataService } from '../../services/dataService';
 import { LinkifiedText, normalizeUrl } from '../../utils/linkUtils';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface AdminBroadcastMessagesProps {
   currentUser: Profile;
@@ -160,7 +161,7 @@ export const AdminBroadcastMessages: React.FC<AdminBroadcastMessagesProps> = ({
       const res = await dataService.notifications.send({
         senderId: currentUser.id,
         senderRole: 'admin',
-        senderName: currentUser.full_name || 'Ingenium Academy Admin',
+        senderName: formatCapitalizedName(currentUser.full_name || currentUser.email, 'Ingenium Academy Admin'),
         title: title.trim(),
         message: message.trim(),
         link: actionLink.trim() ? normalizeUrl(actionLink.trim()) : undefined,

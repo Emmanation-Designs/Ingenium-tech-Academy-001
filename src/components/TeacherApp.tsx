@@ -541,7 +541,6 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                     <div>
                       <h1 className="text-xl sm:text-2xl font-extrabold text-gray-950 flex items-center gap-2">
                         <span>Welcome back, {teacherDisplayName}</span>
-                        <span>👋</span>
                       </h1>
                       <p className="text-xs sm:text-sm text-gray-500 mt-1">
                         Here's an overview of your classes, schedule and your students.

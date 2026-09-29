@@ -71,11 +71,11 @@ export const AdminStudents: React.FC<AdminStudentsProps> = ({
         {/* Profile Card */}
         <div className="bg-white rounded-2xl border border-gray-100/90 p-5 shadow-xs flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-[#E6F5F4] border-2 border-[#0A9D8F]/30 flex items-center justify-center text-[#0A9D8F] font-black text-xl mb-3 shadow-xs">
-            {selectedStudent.full_name?.charAt(0).toUpperCase() || 'S'}
+            {formatCapitalizedName(selectedStudent.full_name || selectedStudent.email, 'Student').charAt(0).toUpperCase()}
           </div>
 
           <h3 className="text-base font-black text-gray-950">
-            {selectedStudent.full_name || 'Student Name'}
+            {formatCapitalizedName(selectedStudent.full_name || selectedStudent.email, 'Student')}
           </h3>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
             {selectedStudent.email}
@@ -308,11 +308,11 @@ export const AdminStudents: React.FC<AdminStudentsProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-xs text-gray-800 shrink-0">
-                    {student.full_name?.charAt(0).toUpperCase() || 'S'}
+                    {formatCapitalizedName(student.full_name || student.email, 'Student').charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-xs font-bold text-gray-950">
-                      {student.full_name || 'Student Name'}
+                      {formatCapitalizedName(student.full_name || student.email, 'Student')}
                     </p>
                     <p className="text-[11px] text-gray-500 font-medium">
                       {student.email}

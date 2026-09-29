@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { Profile, Course, CourseSelection, Enrollment } from '../../types';
 import { formatTimeAgo } from '../../services/realtimeSync';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface AdminDashboardProps {
   students: Profile[];
@@ -191,7 +192,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100/90 shadow-xs">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-gray-950 tracking-tight">
-            Welcome back, {currentUser.full_name?.split(' ')[0] || 'Admin'}!
+            Welcome back, {formatCapitalizedName(currentUser.full_name?.split(' ')[0] || currentUser.email?.split('@')[0], 'Admin')}!
           </h2>
           <p className="text-xs text-gray-500 font-medium mt-0.5">
             Here's what's happening today in real-time.

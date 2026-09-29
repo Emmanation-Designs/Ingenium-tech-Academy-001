@@ -3,6 +3,7 @@ import { Course, CourseSchedule, CourseSelection, Enrollment, Profile } from '..
 import { wittypayService } from '../../services/wittypayService';
 import { paypalService } from '../../services/paypalService';
 import { determinePaymentRouting, getCoursePriceForCountry } from '../../utils/paymentRouting';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 import { 
   CreditCard, ShieldCheck, Check, AlertCircle, Loader2, 
   ChevronLeft, ExternalLink, Lock, CheckCircle2, ArrowRight
@@ -264,7 +265,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="p-3.5 bg-zinc-50 border border-zinc-100 rounded-xl text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Student:</span>
-                  <span className="font-semibold text-zinc-800">{currentUser.full_name || 'Student'}</span>
+                  <span className="font-semibold text-zinc-800">{formatCapitalizedName(currentUser.full_name || currentUser.email, 'Student')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Email:</span>
