@@ -16,6 +16,9 @@ import paypalCreateOrderHandler from './api/paypal/create-order';
 import paypalCaptureOrderHandler from './api/paypal/capture-order';
 import paypalCheckStatusHandler from './api/paypal/check-status';
 
+// Handlers for Notifications & Announcements
+import sendNotificationHandler from './api/notifications/send';
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -74,6 +77,11 @@ async function startServer() {
 
   app.get('/api/paypal/check-status', async (req, res) => {
     await paypalCheckStatusHandler(req, res);
+  });
+
+  // Notifications API Route
+  app.post('/api/notifications/send', async (req, res) => {
+    await sendNotificationHandler(req, res);
   });
 
   // Vite development middleware or static production serving

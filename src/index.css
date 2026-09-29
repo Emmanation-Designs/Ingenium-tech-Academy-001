@@ -20,13 +20,13 @@ html, body, #root {
   
   .bento-card {
     background-color: #18181b;
-    border: 1px solid #27272a;
+    border: 1px solid rgba(10, 157, 143, 0.3);
     border-radius: 24px;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   
   .bento-card:hover {
-    border-color: #3f3f46;
+    border-color: #0A9D8F;
   }
 
   /* Safe Area Inset Utilities (for notch, dynamic island, and home-indicator protection) */
@@ -66,11 +66,11 @@ html, body, #root {
 
 .light .bento-card {
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  border-color: rgba(10, 157, 143, 0.25) !important;
 }
 
 .light .bento-card:hover {
-  border-color: #cbd5e1 !important;
+  border-color: #0A9D8F !important;
 }
 
 /* Background mappings */
@@ -91,11 +91,38 @@ html, body, #root {
   background-color: #f1f5f9 !important;
 }
 
-/* Border mappings */
+/* Universal Brand Green Border enforcement - replaces harsh black lines with brand green (#0A9D8F) */
+*, ::before, ::after {
+  border-color: rgba(10, 157, 143, 0.22);
+}
+
+.border-black,
+.border-zinc-950,
+.border-zinc-900,
+.border-zinc-850,
+.border-zinc-800,
+.border-zinc-700,
+.border-gray-950,
+.border-gray-900,
+.border-gray-800,
+.border-gray-700,
+.border-slate-900,
+.border-slate-800 {
+  border-color: rgba(10, 157, 143, 0.35) !important;
+}
+
 .light .border-zinc-800,
 .light .border-zinc-850,
 .light .border-zinc-900 {
-  border-color: #e2e8f0 !important;
+  border-color: rgba(10, 157, 143, 0.25) !important;
+}
+
+.border-gray-150,
+.border-gray-200,
+.border-zinc-200,
+.border-gray-100,
+.border-zinc-100 {
+  border-color: rgba(10, 157, 143, 0.22) !important;
 }
 
 /* Text mappings */
@@ -119,7 +146,14 @@ html, body, #root {
 .light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  border-color: rgba(10, 157, 143, 0.3) !important;
+}
+
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: #0A9D8F !important;
+  box-shadow: 0 0 0 1px #0A9D8F;
 }
 
 .light input::placeholder {
@@ -132,7 +166,7 @@ html, body, #root {
 }
 
 .light table tr {
-  border-color: #e2e8f0 !important;
+  border-color: rgba(10, 157, 143, 0.2) !important;
 }
 
 .light tbody tr:hover {

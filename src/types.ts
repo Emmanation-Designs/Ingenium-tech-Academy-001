@@ -50,6 +50,8 @@ export interface Course {
   category_id?: string;
   category?: string; // Fallback / joined category name
   duration?: string;
+  level?: string; // 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  what_you_will_learn?: string[] | string;
   training_mode: TrainingMode;
   status: CourseStatus;
   is_published: boolean;
@@ -58,6 +60,8 @@ export interface Course {
   updated_at: string;
   // Dynamic pricing fields loaded on demand
   pricing?: CoursePricing;
+  has_assigned_teacher?: boolean;
+  teacher_name?: string;
 }
 
 export interface CourseSchedule {
@@ -242,6 +246,11 @@ export interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  link?: string;
+  sender_id?: string;
+  sender_name?: string;
+  sender_role?: string;
+  category?: string;
 }
 
 // ====================================================================

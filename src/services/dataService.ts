@@ -5,8 +5,9 @@ import {
   Profile, Course, CourseSchedule, CourseSelection, 
   Enrollment, Payment, UserRole, SelectionStatus, PaymentStatus, EnrollmentStatus,
   CourseCategory, CoursePricing, TeacherInvitation, TeacherCourseAssignment, ClassSession,
-  Order, OrderItem
+  Order, OrderItem, Notification
 } from '../types';
+import { formatCapitalizedName } from '../utils/nameFormatter';
 
 // ====================================================================
 // UUID Helper Functions & Cryptographic Tokens
@@ -89,7 +90,12 @@ export const dataService = {
           console.error('[Supabase Auth] Error querying user profile:', error.message);
           return null;
         }
-        return data as Profile | null;
+        if (!data) return null;
+        const prof = data as Profile;
+        return {
+          ...prof,
+          full_name: formatCapitalizedName(prof.full_name || prof.email, prof.role === 'teacher' ? 'Instructor' : prof.role === 'admin' ? 'Admin' : 'Student')
+        };
       } catch (err) {
         console.error('[Supabase Auth] Exception fetching user profile:', err);
         return null;
@@ -412,6 +418,50 @@ export const dataService = {
       }
     },
 
+    /**
+     * Upload user avatar with automatic optimization and resilient fallback
+     */
+    async uploadAvatar(userId: string, file: File): Promise<string> {
+      if (!isSupabaseConfigured || !supabase) {
+        throw new Error('Supabase database is not configured.');
+      }
+      const rawExt = file.name ? file.name.split('.').pop()?.toLowerCase() : 'jpg';
+      const safeExt = rawExt && /^[a-z0-9]+$/i.test(rawExt) ? rawExt : 'jpg';
+      const filePath = `avatars/${userId}/${Date.now()}.${safeExt}`;
+
+      try {
+        const { error } = await supabase.storage
+          .from('course-images')
+          .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type || 'image/jpeg'
+          });
+
+        if (error) {
+          console.warn('[dataService] Storage upload failed, using optimized data URL fallback:', error.message);
+          throw error;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('course-images')
+          .getPublicUrl(filePath);
+
+        return publicUrl;
+      } catch (storageError) {
+        // Resilient fallback: read as base64 Data URL so the user can always upload an avatar
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            if (dataUrl) resolve(dataUrl);
+            else reject(new Error('Failed to read selected image file.'));
+          };
+          reader.onerror = () => reject(new Error('Error reading selected image file.'));
+          reader.readAsDataURL(file);
+        });
+      }
+    },
+
     async getStudents(): Promise<Profile[]> {
       if (!isSupabaseConfigured || !supabase) return [];
       try {
@@ -420,7 +470,10 @@ export const dataService = {
           .select('*')
           .eq('role', 'student')
           .order('created_at', { ascending: false });
-        return (data as Profile[]) || [];
+        return ((data as Profile[]) || []).map(s => ({
+          ...s,
+          full_name: formatCapitalizedName(s.full_name || s.email, 'Student')
+        }));
       } catch (e) {
         console.error('[Supabase] Error fetching students:', e);
         return [];
@@ -435,7 +488,10 @@ export const dataService = {
           .select('*')
           .in('role', ['admin', 'instructor'])
           .order('created_at', { ascending: false });
-        return (data as Profile[]) || [];
+        return ((data as Profile[]) || []).map(i => ({
+          ...i,
+          full_name: formatCapitalizedName(i.full_name || i.email, 'Instructor')
+        }));
       } catch (e) {
         console.error('[Supabase] Error fetching instructors:', e);
         return [];
@@ -608,14 +664,18 @@ export const dataService = {
           return [];
         }
 
-        // Fetch pricing and categories from Supabase in parallel
-        const [pricingRes, categoriesRes] = await Promise.all([
+        // Fetch pricing, categories, and teacher assignments in parallel
+        const [pricingRes, categoriesRes, assignmentsRes] = await Promise.all([
           supabase.from('course_pricing').select('*'),
-          supabase.from('course_categories').select('*')
+          supabase.from('course_categories').select('*'),
+          supabase.from('teacher_course_assignments').select('course_id, teacher_id, profiles:teacher_id(full_name, email)')
         ]);
 
         const pricingData: CoursePricing[] = pricingRes.data || [];
         const categoriesData: CourseCategory[] = categoriesRes.data || [];
+        const assignmentsData: any[] = assignmentsRes.data || [];
+
+        const assignedCourseIds = new Set(assignmentsData.map(a => a.course_id));
 
         const catMap = new Map<string, string>();
         for (const cat of categoriesData) {
@@ -623,16 +683,47 @@ export const dataService = {
         }
 
         return coursesData.map(c => {
+          let cleanDesc = c.description || '';
+          let metaLevel = (c as any).level || 'Beginner';
+          let metaLearning: string[] = Array.isArray((c as any).what_you_will_learn) ? (c as any).what_you_will_learn : [];
+
+          // Parse meta marker if present in description
+          const metaMatch = cleanDesc.match(/<!-- COURSE_META:([\s\S]*?)-->/);
+          if (metaMatch) {
+            try {
+              const parsed = JSON.parse(metaMatch[1]);
+              if (parsed.level) metaLevel = parsed.level;
+              if (parsed.what_you_will_learn) {
+                metaLearning = Array.isArray(parsed.what_you_will_learn)
+                  ? parsed.what_you_will_learn
+                  : String(parsed.what_you_will_learn).split('\n').map((s: string) => s.trim()).filter(Boolean);
+              }
+              cleanDesc = cleanDesc.replace(/<!-- COURSE_META:[\s\S]*?-->/g, '').trim();
+            } catch (e) {
+              // Ignore parse error
+            }
+          }
+
           const categoryName = (c.category_id && catMap.get(c.category_id)) 
             || c.category 
             || 'Uncategorized';
 
           const foundPricing = pricingData.find(p => p.course_id === c.id);
+          const foundAssignment = assignmentsData.find(a => a.course_id === c.id);
+          const hasTeacher = Boolean(foundAssignment);
+          const teacherName = foundAssignment?.profiles
+            ? formatCapitalizedName(foundAssignment.profiles.full_name || foundAssignment.profiles.email, 'Instructor')
+            : undefined;
 
           return {
             ...c,
+            description: cleanDesc,
+            level: metaLevel,
+            what_you_will_learn: metaLearning,
             category: categoryName,
-            pricing: foundPricing || undefined
+            pricing: foundPricing || undefined,
+            has_assigned_teacher: hasTeacher,
+            teacher_name: teacherName
           };
         }) as Course[];
       } catch (err) {
@@ -669,7 +760,24 @@ export const dataService = {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error('Supabase database is not configured.');
       }
-      const { pricing, ...cleanCourse } = course as any;
+      const { pricing, has_assigned_teacher, teacher_name, level, what_you_will_learn, ...cleanCourse } = course as any;
+
+      // Encode level and what_you_will_learn into description meta marker
+      const metaObj: Record<string, any> = {};
+      if (level) metaObj.level = level;
+      if (what_you_will_learn) {
+        metaObj.what_you_will_learn = Array.isArray(what_you_will_learn)
+          ? what_you_will_learn
+          : String(what_you_will_learn).split('\n').map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      let baseDesc = (cleanCourse.description || '').replace(/<!-- COURSE_META:[\s\S]*?-->/g, '').trim();
+      if (Object.keys(metaObj).length > 0) {
+        cleanCourse.description = `${baseDesc}\n\n<!-- COURSE_META:${JSON.stringify(metaObj)} -->`;
+      } else {
+        cleanCourse.description = baseDesc;
+      }
+
       const { data, error } = await supabase
         .from('courses')
         .insert([cleanCourse])
@@ -678,14 +786,56 @@ export const dataService = {
 
       if (error) throw new Error(error.message);
       realtimeSync.notifyMutation('courses', 'INSERT');
-      return data as Course;
+
+      const created = data as any;
+      return {
+        ...created,
+        description: baseDesc,
+        level: level || 'Beginner',
+        what_you_will_learn: metaObj.what_you_will_learn || [],
+        has_assigned_teacher: false
+      } as Course;
     },
 
     async updateCourse(id: string, updates: Partial<Course>): Promise<Course> {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error('Supabase database is not configured.');
       }
-      const { pricing, ...cleanUpdates } = updates as any;
+      const { pricing, has_assigned_teacher, teacher_name, level, what_you_will_learn, ...cleanUpdates } = updates as any;
+
+      // If level or what_you_will_learn or description are provided
+      if (level !== undefined || what_you_will_learn !== undefined || cleanUpdates.description !== undefined) {
+        let currentDesc = cleanUpdates.description;
+        let existingMeta: Record<string, any> = {};
+
+        if (currentDesc === undefined) {
+          const { data: currentCourse } = await supabase.from('courses').select('description').eq('id', id).single();
+          currentDesc = currentCourse?.description || '';
+        }
+
+        const metaMatch = currentDesc.match(/<!-- COURSE_META:([\s\S]*?)-->/);
+        if (metaMatch) {
+          try {
+            existingMeta = JSON.parse(metaMatch[1]);
+          } catch (e) {}
+        }
+
+        let baseDesc = currentDesc.replace(/<!-- COURSE_META:[\s\S]*?-->/g, '').trim();
+
+        if (level !== undefined) existingMeta.level = level;
+        if (what_you_will_learn !== undefined) {
+          existingMeta.what_you_will_learn = Array.isArray(what_you_will_learn)
+            ? what_you_will_learn
+            : String(what_you_will_learn).split('\n').map((s: string) => s.trim()).filter(Boolean);
+        }
+
+        if (Object.keys(existingMeta).length > 0) {
+          cleanUpdates.description = `${baseDesc}\n\n<!-- COURSE_META:${JSON.stringify(existingMeta)} -->`;
+        } else {
+          cleanUpdates.description = baseDesc;
+        }
+      }
+
       const { data, error } = await supabase
         .from('courses')
         .update(cleanUpdates)
@@ -695,7 +845,28 @@ export const dataService = {
 
       if (error) throw new Error(error.message);
       realtimeSync.notifyMutation('courses', 'UPDATE');
-      return data as Course;
+
+      const updated = data as any;
+      let cleanDesc = updated.description || '';
+      let metaLevel = level || 'Beginner';
+      let metaLearning: string[] = Array.isArray(what_you_will_learn) ? what_you_will_learn : [];
+
+      const metaMatch = cleanDesc.match(/<!-- COURSE_META:([\s\S]*?)-->/);
+      if (metaMatch) {
+        try {
+          const parsed = JSON.parse(metaMatch[1]);
+          if (parsed.level) metaLevel = parsed.level;
+          if (parsed.what_you_will_learn) metaLearning = parsed.what_you_will_learn;
+          cleanDesc = cleanDesc.replace(/<!-- COURSE_META:[\s\S]*?-->/g, '').trim();
+        } catch (e) {}
+      }
+
+      return {
+        ...updated,
+        description: cleanDesc,
+        level: metaLevel,
+        what_you_will_learn: metaLearning
+      } as Course;
     },
 
     async deleteCourse(id: string): Promise<void> {
@@ -1451,7 +1622,10 @@ export const dataService = {
           console.error('[Supabase] Error fetching teachers:', error.message);
           return [];
         }
-        return (data as Profile[]) || [];
+        return ((data as Profile[]) || []).map(t => ({
+          ...t,
+          full_name: formatCapitalizedName(t.full_name || t.email, 'Instructor')
+        }));
       } catch (e) {
         console.error('[Supabase] Exception fetching teachers:', e);
         return [];
@@ -1508,7 +1682,7 @@ export const dataService = {
           updated_at: row.updated_at,
           course_title: row.courses?.title,
           schedule_label: row.course_schedules?.label,
-          teacher_name: row.profiles?.full_name,
+          teacher_name: formatCapitalizedName(row.profiles?.full_name || row.profiles?.email, 'Instructor'),
           teacher_email: row.profiles?.email
         }));
       } catch (e) {
@@ -2072,5 +2246,151 @@ export const dataService = {
   getPayments(studentId?: string): Promise<Payment[]> {
     return dataService.payments.getPayments(studentId);
   },
+
+  // 11. NOTIFICATIONS SERVICE
+  notifications: {
+    async getForUser(userId: string): Promise<Notification[]> {
+      if (!isSupabaseConfigured || !supabase || !userId) return [];
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('[Supabase Notifications] Error fetching notifications:', error.message);
+          return [];
+        }
+        return (data || []) as Notification[];
+      } catch (err) {
+        console.error('[Supabase Notifications] Exception fetching notifications:', err);
+        return [];
+      }
+    },
+
+    async markAsRead(notificationId: string): Promise<boolean> {
+      if (!isSupabaseConfigured || !supabase || !notificationId) return false;
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notificationId);
+
+        if (error) {
+          console.error('[Supabase Notifications] Error marking as read:', error.message);
+          return false;
+        }
+        realtimeSync.notifyMutation('notifications', 'UPDATE');
+        return true;
+      } catch (err) {
+        console.error('[Supabase Notifications] Exception marking as read:', err);
+        return false;
+      }
+    },
+
+    async markAllAsRead(userId: string): Promise<boolean> {
+      if (!isSupabaseConfigured || !supabase || !userId) return false;
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', userId)
+          .eq('is_read', false);
+
+        if (error) {
+          console.error('[Supabase Notifications] Error marking all as read:', error.message);
+          return false;
+        }
+        realtimeSync.notifyMutation('notifications', 'UPDATE');
+        return true;
+      } catch (err) {
+        console.error('[Supabase Notifications] Exception marking all as read:', err);
+        return false;
+      }
+    },
+
+    async delete(notificationId: string): Promise<boolean> {
+      if (!isSupabaseConfigured || !supabase || !notificationId) return false;
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
+
+        if (error) {
+          console.error('[Supabase Notifications] Error deleting notification:', error.message);
+          return false;
+        }
+        realtimeSync.notifyMutation('notifications', 'DELETE');
+        return true;
+      } catch (err) {
+        console.error('[Supabase Notifications] Exception deleting notification:', err);
+        return false;
+      }
+    },
+
+    async send(payload: {
+      senderId: string;
+      senderRole: 'admin' | 'teacher';
+      senderName: string;
+      title: string;
+      message: string;
+      link?: string;
+      targetAudience?: 'all' | 'students' | 'teachers' | 'course_students' | 'specific_users';
+      courseId?: string;
+      recipientIds?: string[];
+      category?: string;
+    }): Promise<{ success: boolean; deliveredCount?: number; error?: string }> {
+      try {
+        const response = await fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          return { success: false, error: data.error || 'Failed to send notification' };
+        }
+
+        realtimeSync.notifyMutation('notifications', 'INSERT');
+        return { success: true, deliveredCount: data.deliveredCount };
+      } catch (err: any) {
+        console.error('[dataService.notifications.send] Exception:', err);
+        return { success: false, error: err.message || 'Network error while sending notification' };
+      }
+    }
+  },
+
+  getNotifications(userId: string): Promise<Notification[]> {
+    return dataService.notifications.getForUser(userId);
+  },
+  markNotificationAsRead(id: string): Promise<boolean> {
+    return dataService.notifications.markAsRead(id);
+  },
+  markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    return dataService.notifications.markAllAsRead(userId);
+  },
+  deleteNotification(id: string): Promise<boolean> {
+    return dataService.notifications.delete(id);
+  },
+  sendNotification(payload: {
+    senderId: string;
+    senderRole: 'admin' | 'teacher';
+    senderName: string;
+    title: string;
+    message: string;
+    link?: string;
+    targetAudience?: 'all' | 'students' | 'teachers' | 'course_students' | 'specific_users';
+    courseId?: string;
+    recipientIds?: string[];
+    category?: string;
+  }) {
+    return dataService.notifications.send(payload);
+  },
+
   learning: learningService
 };

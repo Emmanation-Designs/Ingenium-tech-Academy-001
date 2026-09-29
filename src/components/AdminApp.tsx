@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Profile, Course, CourseCategory, CourseSchedule, CourseSelection, 
   Enrollment, TrainingMode, TeacherInvitation, TeacherCourseAssignment,
-  Order, Payment
+  Order, Payment, Notification
 } from '../types';
 import { dataService } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
@@ -18,6 +18,8 @@ import { AdminStudents } from './admin/AdminStudents';
 import { AdminCategories } from './admin/AdminCategories';
 import { AdminTeachers } from './admin/AdminTeachers';
 import { AdminOrdersView } from './admin/AdminOrdersView';
+import { AdminBroadcastMessages } from './admin/AdminBroadcastMessages';
+import { NotificationCenterModal } from './common/NotificationCenterModal';
 import { Plus, RefreshCw, LogOut, ShieldCheck, BarChart2, GraduationCap, Settings } from 'lucide-react';
 
 interface AdminAppProps {
@@ -58,6 +60,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherCourseAssignment[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotificationCenter, setShowNotificationCenter] = useState<boolean>(false);
 
   // Fetch all authoritative records from Supabase
   const loadData = useCallback(async (isBackground: boolean = false) => {
@@ -79,7 +83,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         fetchedInvitations,
         fetchedAssignments,
         fetchedOrders,
-        fetchedPayments
+        fetchedPayments,
+        fetchedNotifications
       ] = await Promise.all([
         dataService.getCourses(),
         dataService.getCategories(),
@@ -92,7 +97,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         dataService.getTeacherInvitations(),
         dataService.getTeacherAssignments(),
         dataService.getOrders(),
-        dataService.getPayments()
+        dataService.getPayments(),
+        dataService.notifications.getForUser(currentUser.id)
       ]);
 
       setCourses(fetchedCourses);
@@ -107,6 +113,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       setTeacherAssignments(fetchedAssignments);
       setOrders(fetchedOrders);
       setPayments(fetchedPayments);
+      setNotifications(fetchedNotifications);
       setLastSyncedAt(new Date());
     } catch (err) {
       console.error('Failed to load authoritative admin data:', err);
@@ -114,7 +121,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       setLoading(false);
       setIsSyncing(false);
     }
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
     // Initial fetch
@@ -141,6 +148,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
     category_id: string;
     category: string;
     duration: string;
+    level?: string;
+    what_you_will_learn?: string[];
     training_mode: TrainingMode;
     status: 'draft' | 'published' | 'archived';
     usd_price: number;
@@ -168,6 +177,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         category_id: formData.category_id,
         category: formData.category,
         duration: formData.duration,
+        level: formData.level,
+        what_you_will_learn: formData.what_you_will_learn,
         training_mode: formData.training_mode,
         status: formData.status,
         is_published: formData.status === 'published',
@@ -191,6 +202,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         category_id: formData.category_id,
         category: formData.category,
         duration: formData.duration,
+        level: formData.level,
+        what_you_will_learn: formData.what_you_will_learn,
         training_mode: formData.training_mode,
         status: formData.status,
         is_published: formData.status === 'published',
@@ -323,6 +336,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       case 'times': return 'Class Times';
       case 'requests': return 'Course Requests';
       case 'orders': return 'Wittypay Orders';
+      case 'messages': return 'Broadcast Announcements';
       case 'students': return 'Students';
       case 'instructors': return 'Teachers';
       case 'enrollments': return 'Enrollments';
@@ -379,7 +393,8 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         title={getHeaderTitle()}
         onOpenMenu={() => setIsSidebarOpen(true)}
         rightAction={renderHeaderRightAction()}
-        unreadCount={pendingRequestsCount}
+        unreadCount={notifications.filter(n => !n.is_read).length}
+        onOpenNotifications={() => setShowNotificationCenter(true)}
         isSyncing={isSyncing}
         onRefresh={() => loadData(true)}
         lastSyncedAt={lastSyncedAt}
@@ -522,6 +537,18 @@ export const AdminApp: React.FC<AdminAppProps> = ({
               />
             )}
 
+            {activeTab === 'messages' && (
+              <AdminBroadcastMessages
+                currentUser={currentUser}
+                students={students}
+                teachers={teachers}
+                courses={courses}
+                enrollments={enrollments}
+                selections={selections}
+                onRefresh={() => loadData(true)}
+              />
+            )}
+
             {activeTab === 'students' && (
               <AdminStudents
                 students={students}
@@ -659,6 +686,27 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         }}
         onOpenMenu={() => setIsSidebarOpen(true)}
         pendingRequestsCount={pendingRequestsCount}
+      />
+
+      {/* Universal Notification Center Modal */}
+      <NotificationCenterModal
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+        notifications={notifications}
+        onMarkAsRead={async (id: string) => {
+          await dataService.notifications.markAsRead(id);
+          setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        }}
+        onMarkAllAsRead={async () => {
+          await dataService.notifications.markAllAsRead(currentUser.id);
+          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        }}
+        onDelete={async (id: string) => {
+          await dataService.notifications.delete(id);
+          setNotifications(prev => prev.filter(n => n.id !== id));
+        }}
+        onRefresh={() => loadData(true)}
+        currentUserRole="admin"
       />
     </div>
   );

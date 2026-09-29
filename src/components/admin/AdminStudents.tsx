@@ -5,6 +5,7 @@ import {
   Calendar, Globe, CheckCircle2, Check, Loader2 
 } from 'lucide-react';
 import { Profile, CourseSelection, Enrollment, Course } from '../../types';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface AdminStudentsProps {
   students: Profile[];

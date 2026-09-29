@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Course, CourseSchedule, CourseSelection, Profile } from '../../types';
+import { Course, CourseSchedule, CourseSelection, Enrollment, Profile } from '../../types';
 import { wittypayService } from '../../services/wittypayService';
 import { paypalService } from '../../services/paypalService';
 import { determinePaymentRouting, getCoursePriceForCountry } from '../../utils/paymentRouting';
@@ -13,6 +13,7 @@ interface CheckoutModalProps {
   currentUser: Profile;
   courses: Course[];
   selections: CourseSelection[];
+  enrollments?: Enrollment[];
   onClose: () => void;
   onSuccess: (orderId: string) => void;
   singleCourse?: {
@@ -26,6 +27,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   currentUser,
   courses,
   selections,
+  enrollments = [],
   onClose,
   onSuccess,
   singleCourse
@@ -86,7 +88,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const totalAmount = checkoutItems.reduce((acc, item) => acc + item.unitPrice, 0);
 
+  // Check if student has already bought or enrolled in any of these courses
+  const enrolledCourseIds = React.useMemo(() => new Set([
+    ...enrollments.filter(e => e.status !== 'dropped' && e.status !== 'cancelled').map(e => e.course_id),
+    ...selections.filter(s => s.status === 'approved' || s.status === 'paid' || s.status === 'active').map(s => s.course_id)
+  ]), [enrollments, selections]);
+  const alreadyEnrolledItems = React.useMemo(() => {
+    return checkoutItems.filter(item => enrolledCourseIds.has(item.courseId));
+  }, [checkoutItems, enrolledCourseIds]);
+  const isAlreadyEnrolled = alreadyEnrolledItems.length > 0;
+
   const handleInitiatePayment = async () => {
+    if (isAlreadyEnrolled) {
+      setError("You already own this course (Purchased & Enrolled). You cannot purchase the same course multiple times.");
+      return;
+    }
+
     if (checkoutItems.length === 0) {
       setError("No courses selected for payment.");
       return;
@@ -261,24 +278,45 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Action Button */}
-              <button
-                onClick={handleInitiatePayment}
-                disabled={loading || checkoutItems.length === 0}
-                className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-semibold text-sm transition-all shadow-sm active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Preparing Secure Checkout...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Proceed to {routing.gatewayName} Payment</span>
-                  </>
-                )}
-              </button>
+              {/* Already enrolled warning if user owns this course */}
+              {isAlreadyEnrolled ? (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>You Already Own This Course</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                    You are already enrolled with full lifetime access. You cannot purchase the same course multiple times.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Return to My Courses & Classroom</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                /* Action Button */
+                <button
+                  onClick={handleInitiatePayment}
+                  disabled={loading || checkoutItems.length === 0}
+                  className="w-full py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-semibold text-sm transition-all shadow-sm active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Preparing Secure Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Proceed to {routing.gatewayName} Payment</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400">
                 <Lock className="w-3 h-3 text-[#0A9D8F]" />

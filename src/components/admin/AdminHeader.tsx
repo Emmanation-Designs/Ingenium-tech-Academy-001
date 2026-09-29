@@ -11,6 +11,7 @@ interface AdminHeaderProps {
   isSyncing?: boolean;
   onRefresh?: () => void;
   lastSyncedAt?: Date | null;
+  onOpenNotifications?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
@@ -20,7 +21,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   unreadCount = 0,
   isSyncing = false,
   onRefresh,
-  lastSyncedAt
+  lastSyncedAt,
+  onOpenNotifications
 }) => {
   // Re-calculate relative time every 5 seconds
   const [, setTick] = useState(0);
@@ -81,21 +83,24 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         )}
 
         {/* Custom Header Right Action (e.g. Add buttons) */}
-        {rightAction ? (
-          rightAction
-        ) : (
-          <div className="relative">
-            <button
-              aria-label="Notifications"
-              className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-all cursor-pointer relative"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#0A9D8F]" />
-              )}
-            </button>
-          </div>
+        {rightAction && (
+          <div>{rightAction}</div>
         )}
+
+        {/* Notification Bell Button */}
+        <div className="relative">
+          <button
+            onClick={onOpenNotifications}
+            aria-label="Notifications"
+            title="Open Notifications"
+            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all cursor-pointer relative"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#0A9D8F] animate-pulse" />
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -3,6 +3,7 @@ import { dataService } from '../services/dataService';
 import { Profile } from '../types';
 import { Mail, Lock, User, Globe, ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { BrandLogo } from './common/BrandLogo';
+import { formatCapitalizedName, sanitizeCapitalizedInput } from '../utils/nameFormatter';
 
 interface AuthProps {
   onSuccess: (user: Profile) => void;
@@ -52,7 +53,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
           onSuccess(user);
         }
       } else if (mode === 'signup') {
-        if (!fullName || !email || !password) {
+        const cleanFullName = formatCapitalizedName(fullName, 'Student');
+        if (!cleanFullName || !email || !password) {
           setError('Please fill in all required fields.');
           setLoading(false);
           return;
@@ -60,7 +62,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
         const { user, error: registerError } = await dataService.auth.signUp(
           email,
           password,
-          fullName,
+          cleanFullName,
           '',
           country,
           timezone
@@ -97,7 +99,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
 
   return (
     <div className="flex items-center justify-center min-h-screen dot-grid text-white p-4 sm:p-6 md:p-8 font-sans overflow-y-auto pt-safe pb-safe">
-      <div className="w-full max-w-sm sm:max-w-[440px] bg-zinc-900 border border-zinc-800 rounded-3xl sm:rounded-[32px] p-5 sm:p-7 shadow-2xl relative transition-all duration-300 my-auto">
+      <div className="w-full max-w-sm sm:max-w-[440px] bg-zinc-900 border border-[#0A9D8F]/35 rounded-3xl sm:rounded-[32px] p-5 sm:p-7 shadow-2xl relative transition-all duration-300 my-auto">
         
         {/* Back navigation */}
         <button
@@ -110,7 +112,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
               onBackToOnboarding();
             }
           }}
-          className="absolute top-5 left-5 sm:top-6 sm:left-6 p-2 rounded-full border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-white active:translate-y-0.5 transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
+          className="absolute top-5 left-5 sm:top-6 sm:left-6 p-2 rounded-full border border-[#0A9D8F]/30 bg-zinc-950 hover:bg-zinc-800 text-white active:translate-y-0.5 transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
           aria-label="Go back"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -158,9 +160,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     type="text"
                     required
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => setFullName(sanitizeCapitalizedInput(e.target.value))}
                     placeholder="E.g. John Doe"
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
+                    className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-[#0A9D8F]/30 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -174,7 +176,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     placeholder="E.g. Nigeria"
-                    className="w-full px-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
+                    className="w-full px-4 py-3 text-sm bg-zinc-950 border border-[#0A9D8F]/30 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                   />
                 </div>
                 <div>
@@ -182,7 +184,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-3 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-bold"
+                    className="w-full px-3 py-3 text-sm bg-zinc-950 border border-[#0A9D8F]/30 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-bold"
                   >
                     <option value="Africa/Lagos">Africa/Lagos</option>
                     <option value="Europe/London">Europe/London</option>
@@ -206,7 +208,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="E.g. student@example.com"
-                className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
+                className="w-full pl-10 pr-4 py-3 text-sm bg-zinc-950 border border-[#0A9D8F]/30 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
               />
             </div>
           </div>
@@ -234,7 +236,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 6 characters"
-                  className="w-full pl-10 pr-12 py-3 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
+                  className="w-full pl-10 pr-12 py-3 text-sm bg-zinc-950 border border-[#0A9D8F]/30 text-white rounded-xl focus:border-[#0A9D8F] focus:ring-1 focus:ring-[#0A9D8F]/30 focus:outline-none transition-all font-semibold"
                 />
                 <button
                   type="button"
@@ -252,7 +254,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-2xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-extrabold text-sm border border-zinc-800 shadow-lg active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-2xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-extrabold text-sm border border-[#0A9D8F]/40 shadow-lg active:translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Please wait...' : (
               mode === 'signin' ? 'Sign In' : 
@@ -263,7 +265,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBackToOnboarding }) => 
         </form>
 
         {/* Mode Switchers */}
-        <div className="mt-8 pt-6 border-t border-zinc-800 text-center">
+        <div className="mt-8 pt-6 border-t border-[#0A9D8F]/25 text-center">
           {mode === 'signin' ? (
             <p className="text-xs font-semibold text-zinc-400">
               New to Ingenium?{' '}

@@ -118,10 +118,10 @@ export const AdminCourses: React.FC<AdminCoursesProps> = ({
             return (
               <div
                 key={course.id}
-                className="bg-white rounded-2xl border border-gray-100/90 p-4 flex gap-3.5 items-start shadow-xs hover:border-gray-200 transition-all relative"
+                className="bg-white rounded-2xl border border-[#0A9D8F]/25 p-4 flex gap-3.5 items-start shadow-xs hover:border-[#0A9D8F] transition-all relative"
               >
                 {/* Course Thumbnail */}
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gray-100 border border-gray-100 overflow-hidden shrink-0">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-gray-100 border border-[#0A9D8F]/20 overflow-hidden shrink-0">
                   {course.image_url ? (
                     <img
                       src={course.image_url}
@@ -142,13 +142,26 @@ export const AdminCourses: React.FC<AdminCoursesProps> = ({
                     {course.title}
                   </h4>
 
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E6F5F4] text-[#0A9D8F]">
                       {course.category || 'Data Science'}
                     </span>
                     <span className="text-[11px] text-gray-500 font-medium">
-                      {course.duration || '8 Weeks'} • {course.training_mode === 'online' ? 'Live Online' : course.training_mode || 'Live Online'}
+                      {course.duration || '8 Weeks'} • {course.level || 'Beginner'} • {course.training_mode === 'online' ? 'Live Online' : course.training_mode || 'Live Online'}
                     </span>
+                    {course.has_assigned_teacher ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
+                        <span>Instructor:</span>
+                        <span>{course.teacher_name || 'Assigned'}</span>
+                      </span>
+                    ) : (
+                      <span 
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                        title="Without a teacher assigned, this course is hidden from students to buy."
+                      >
+                        Awaiting Teacher (Hidden from Students)
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between mt-2.5">

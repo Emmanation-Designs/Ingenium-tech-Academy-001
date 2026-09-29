@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
-  ArrowLeft, UploadCloud, Info, Check, 
-  Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, X 
+  ArrowLeft, UploadCloud, Info, Check, Plus, Trash2,
+  Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, X, Clock, BarChart2 
 } from 'lucide-react';
 import { Course, CourseCategory } from '../../types';
 
@@ -16,6 +16,8 @@ interface AdminCourseFormProps {
     category_id: string;
     category: string;
     duration: string;
+    level: string;
+    what_you_will_learn: string[];
     training_mode: string;
     status: 'draft' | 'published' | 'archived';
     usd_price: number;
@@ -37,13 +39,52 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
   const isEditing = !!initialCourse;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to parse duration amount & unit
+  const parseDuration = (rawDuration?: string) => {
+    if (!rawDuration) return { amount: '8', unit: 'Weeks' };
+    const match = rawDuration.match(/^(\d+)\s*(days?|weeks?|months?|years?)/i);
+    if (match) {
+      const amount = match[1];
+      const rawUnit = match[2].toLowerCase();
+      let unit = 'Weeks';
+      if (rawUnit.startsWith('day')) unit = 'Days';
+      else if (rawUnit.startsWith('week')) unit = 'Weeks';
+      else if (rawUnit.startsWith('month')) unit = 'Months';
+      else if (rawUnit.startsWith('year')) unit = 'Years';
+      return { amount, unit };
+    }
+    return { amount: '8', unit: 'Weeks' };
+  };
+
+  const initDur = parseDuration(initialCourse?.duration);
+
   // Form states
   const [currentStep, setCurrentStep] = useState<'details' | 'pricing'>('details');
   const [title, setTitle] = useState(initialCourse?.title || '');
   const [shortDescription, setShortDescription] = useState(initialCourse?.short_description || '');
   const [description, setDescription] = useState(initialCourse?.description || '');
   const [categoryId, setCategoryId] = useState(initialCourse?.category_id || categories[0]?.id || '');
-  const [duration, setDuration] = useState(initialCourse?.duration || '8 Weeks');
+  const [durationAmount, setDurationAmount] = useState<string>(initDur.amount);
+  const [durationUnit, setDurationUnit] = useState<string>(initDur.unit);
+  const [level, setLevel] = useState<string>(initialCourse?.level || 'Beginner');
+
+  const parseInitialOutcomes = (): string[] => {
+    if (initialCourse?.what_you_will_learn) {
+      if (Array.isArray(initialCourse.what_you_will_learn) && initialCourse.what_you_will_learn.length > 0) {
+        return initialCourse.what_you_will_learn;
+      }
+      if (typeof initialCourse.what_you_will_learn === 'string' && initialCourse.what_you_will_learn.trim()) {
+        return initialCourse.what_you_will_learn.split('\n').map(s => s.trim().replace(/^[-*•]\s*/, '')).filter(Boolean);
+      }
+    }
+    return [
+      'Master core concepts and advanced topics',
+      'Build interactive dashboards and custom reports',
+      'Hands-on practical projects for your portfolio'
+    ];
+  };
+
+  const [whatYouWillLearn, setWhatYouWillLearn] = useState<string[]>(parseInitialOutcomes());
   const [trainingMode, setTrainingMode] = useState(initialCourse?.training_mode || 'online');
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>(
     initialCourse?.status === 'archived' ? 'archived' : (initialCourse?.is_published ? 'published' : 'draft')
@@ -110,6 +151,8 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
     const selectedCat = categories.find(c => c.id === categoryId);
     const categoryName = selectedCat?.name || 'Data Science';
 
+    const combinedDuration = `${durationAmount || '8'} ${durationUnit}`;
+
     setSaving(true);
     setErrorMsg(null);
     try {
@@ -119,7 +162,9 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
         description: description.trim(),
         category_id: categoryId,
         category: categoryName,
-        duration: duration.trim(),
+        duration: combinedDuration,
+        level,
+        what_you_will_learn: whatYouWillLearn.map(o => o.trim()).filter(Boolean),
         training_mode: trainingMode,
         status,
         usd_price: Number(usdPrice || 0),
@@ -273,30 +318,79 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
             {/* Full Description with Mock Toolbar */}
             <div>
               <label className="block text-xs font-bold text-gray-800 mb-1.5">
-                Full Description
+                About This Course (Detailed Overview & Syllabus Summary)
               </label>
-              <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:border-[#0A9D8F] transition-all bg-white">
+              <div className="border border-[#0A9D8F]/30 rounded-xl overflow-hidden focus-within:border-[#0A9D8F] transition-all bg-white">
                 {/* Mini Formatting Toolbar */}
-                <div className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-50 border-b border-gray-200 text-gray-600 text-xs">
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><Underline className="w-3.5 h-3.5" /></button>
-                  <div className="w-px h-3 bg-gray-300 mx-1" />
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><List className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><ListOrdered className="w-3.5 h-3.5" /></button>
-                  <button type="button" className="p-1 hover:bg-gray-200 rounded cursor-pointer"><LinkIcon className="w-3.5 h-3.5" /></button>
+                <div className="flex items-center gap-1 px-2.5 py-1.5 bg-[#E6F5F4]/30 border-b border-[#0A9D8F]/20 text-gray-600 text-xs">
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><Underline className="w-3.5 h-3.5" /></button>
+                  <div className="w-px h-3 bg-[#0A9D8F]/20 mx-1" />
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><List className="w-3.5 h-3.5" /></button>
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><ListOrdered className="w-3.5 h-3.5" /></button>
+                  <button type="button" className="p-1 hover:bg-[#E6F5F4] rounded cursor-pointer"><LinkIcon className="w-3.5 h-3.5" /></button>
                 </div>
                 <textarea
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write full course description..."
-                  className="w-full px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none resize-y"
+                  placeholder="Write comprehensive course description, who it is for, prerequisites, and teaching methodology..."
+                  className="w-full px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none resize-y leading-relaxed"
                 />
               </div>
             </div>
 
-            {/* 2-Column: Category & Duration */}
+            {/* What You Will Learn (Key Outcomes) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-[#0A9D8F] stroke-[3]" />
+                  <span>What You Will Learn (Bullet Points)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setWhatYouWillLearn(prev => [...prev, ''])}
+                  className="text-[11px] font-bold text-[#0A9D8F] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Outcome</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {whatYouWillLearn.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center shrink-0">
+                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    </div>
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const copy = [...whatYouWillLearn];
+                        copy[idx] = e.target.value;
+                        setWhatYouWillLearn(copy);
+                      }}
+                      placeholder={`Key learning outcome #${idx + 1}...`}
+                      className="flex-1 px-3 py-1.5 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F]"
+                    />
+                    {whatYouWillLearn.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setWhatYouWillLearn(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg cursor-pointer"
+                        title="Remove objective"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 2-Column: Category & Level */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -314,7 +408,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
+                  className="w-full px-3 py-2.5 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -325,13 +419,13 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                 </select>
 
                 {showNewCatInput && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded-xl border border-gray-200 flex gap-1.5">
+                  <div className="mt-2 p-2 bg-[#E6F5F4]/30 rounded-xl border border-[#0A9D8F]/25 flex gap-1.5">
                     <input
                       type="text"
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
                       placeholder="Category name"
-                      className="flex-1 px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs"
+                      className="flex-1 px-2 py-1 bg-white border border-[#0A9D8F]/30 rounded-lg text-xs"
                     />
                     <button
                       type="button"
@@ -346,32 +440,67 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-gray-800 mb-1.5">
-                  Duration
+                  Skill Level
                 </label>
-                <input
-                  type="text"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="e.g. 8 Weeks"
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
-                />
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="All Levels">All Levels</option>
+                </select>
               </div>
             </div>
 
-            {/* Training Mode */}
-            <div>
-              <label className="block text-xs font-bold text-gray-800 mb-1.5">
-                Training Mode
-              </label>
-              <select
-                value={trainingMode}
-                onChange={(e) => setTrainingMode(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
-              >
-                <option value="online">Live Online</option>
-                <option value="self-paced">Self-Paced</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
+            {/* 2-Column: Duration & Training Mode */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  Duration
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={durationAmount}
+                      onChange={(e) => setDurationAmount(e.target.value)}
+                      placeholder="8"
+                      className="w-full px-2.5 py-2.5 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all text-center"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <select
+                      value={durationUnit}
+                      onChange={(e) => setDurationUnit(e.target.value)}
+                      className="w-full px-2.5 py-2.5 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
+                    >
+                      <option value="Days">Days</option>
+                      <option value="Weeks">Weeks</option>
+                      <option value="Months">Months</option>
+                      <option value="Years">Years</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  Training Mode
+                </label>
+                <select
+                  value={trainingMode}
+                  onChange={(e) => setTrainingMode(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
+                >
+                  <option value="online">Live Online</option>
+                  <option value="self-paced">Self-Paced</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </div>
             </div>
 
             {/* Next Button */}

@@ -4,6 +4,7 @@ import {
   Trash2, Link2, BookOpen, Clock, X, AlertCircle, Users, ChevronRight, UserCheck
 } from 'lucide-react';
 import { Profile, TeacherInvitation, TeacherCourseAssignment, Course, CourseSchedule } from '../../types';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface AdminTeachersProps {
   teachers: Profile[];
@@ -226,10 +227,12 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-[#0A9D8F] text-white flex items-center justify-center font-bold text-sm">
-                            {teacher.full_name?.charAt(0)?.toUpperCase() || 'T'}
+                            {formatCapitalizedName(teacher.full_name || teacher.email, 'Instructor').charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold text-gray-950">{teacher.full_name || 'Instructor'}</h4>
+                            <h4 className="text-xs font-bold text-gray-950">
+                              {formatCapitalizedName(teacher.full_name || teacher.email, 'Instructor')}
+                            </h4>
                             <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
                               <Mail className="w-3 h-3 text-gray-400" />
                               <span>{teacher.email}</span>
@@ -589,7 +592,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-gray-950">Assigned Classes</h3>
                 <p className="text-xs text-gray-500">
-                  {selectedTeacher.full_name} ({selectedTeacher.email})
+                  {formatCapitalizedName(selectedTeacher.full_name || selectedTeacher.email, 'Instructor')} ({selectedTeacher.email})
                 </p>
               </div>
               <button
