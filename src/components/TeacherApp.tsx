@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   GraduationCap, BookOpen, Users, Calendar, Video, Clock, 
-  Search, ExternalLink, Copy, Check, Save, User, Settings, 
+  Search, ExternalLink, Copy, Check, CheckCircle2, Save, User, Settings, 
   LogOut, RefreshCw, AlertCircle, ChevronRight, ChevronDown, X, Mail,
   Play, Sparkles, Plus, Globe, Bell, Megaphone, SlidersHorizontal,
   Home, BarChart2, Link as LinkIcon, Menu, ArrowRight
 } from 'lucide-react';
 import { Profile, Course, CourseSchedule, ClassSession, Notification } from '../types';
-import { dataService } from '../services/dataService';
+import { dataService, getStoredMeetOverride, getStoredCourseOverride, saveStoredMeetOverride, saveStoredCourseOverride } from '../services/dataService';
 import { realtimeSync } from '../services/realtimeSync';
 import { TeacherCourseWorkspace } from './teacher/TeacherCourseWorkspace';
 import { TeacherCourseManagerModal } from './teacher/TeacherCourseManagerModal';
@@ -55,7 +55,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   const [userDropdownOpen, setUserDropdownOpen] = useState<boolean>(false);
 
   // Manage Course details modal state
-  const [managingCourse, setManagingCourse] = useState<Course | null>(null);
+  const [managingItem, setManagingItem] = useState<TeacherClassItem | null>(null);
   const [isSavingCourseDetails, setIsSavingCourseDetails] = useState<boolean>(false);
 
   // Meeting Link & Schedule edit modal state
@@ -82,6 +82,16 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   const [urlFeedback, setUrlFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
+  // Global action toast for immediate visual feedback
+  const [actionToast, setActionToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showActionToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setActionToast({ type, message });
+    setTimeout(() => {
+      setActionToast(null);
+    }, 4500);
+  };
+
   // Profile edit state
   const [profileName, setProfileName] = useState<string>(currentUser.full_name || '');
   const [profileTimezone, setProfileTimezone] = useState<string>(currentUser.timezone || 'Africa/Lagos');
@@ -103,7 +113,34 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
         dataService.getTeacherClasses(currentUser.id),
         dataService.notifications.getForUser(currentUser.id)
       ]);
-      setClasses(teacherClasses);
+
+      const hydratedClasses = teacherClasses.map(item => {
+        const storedMeet = getStoredMeetOverride(item.course.id);
+        const storedCourse = getStoredCourseOverride(item.course.id);
+        const effectiveMeet = (storedMeet && storedMeet.trim()) 
+          || (item.meetingUrl && item.meetingUrl.trim()) 
+          || (item.schedule?.meeting_url && item.schedule.meeting_url.trim())
+          || undefined;
+
+        const effectiveCourse: Course = storedCourse ? {
+          ...item.course,
+          ...storedCourse,
+          is_published: storedCourse.is_published !== undefined ? storedCourse.is_published : item.course.is_published,
+          status: storedCourse.status || item.course.status
+        } : item.course;
+
+        return {
+          ...item,
+          course: effectiveCourse,
+          meetingUrl: effectiveMeet,
+          schedule: item.schedule ? {
+            ...item.schedule,
+            meeting_url: effectiveMeet
+          } : item.schedule
+        };
+      });
+
+      setClasses(hydratedClasses);
       setNotifications(teacherNotifications);
       setLastSyncedAt(new Date());
     } catch (err) {
@@ -172,6 +209,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
   // Handlers for Google Meet URL & Schedule
   const handleOpenMeetModal = (item: TeacherClassItem) => {
+    const activeUrl = item.meetingUrl || item.schedule?.meeting_url || '';
     setEditingSchedule({
       courseId: item.course.id,
       courseTitle: item.course.title,
@@ -181,9 +219,9 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
       startTime: item.schedule?.start_time || '18:00',
       endTime: item.schedule?.end_time || '20:00',
       timezone: item.schedule?.timezone || currentUser.timezone || 'Africa/Lagos',
-      currentUrl: item.meetingUrl || ''
+      currentUrl: activeUrl
     });
-    setMeetUrlInput(item.meetingUrl || '');
+    setMeetUrlInput(activeUrl);
     setScheduleLabelInput(item.schedule?.label || 'Regular Class Schedule');
     setDayOfWeekInput(item.schedule?.day_of_week || 'Monday, Wednesday, Friday');
     setStartTimeInput(item.schedule?.start_time || '18:00');
@@ -208,7 +246,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
     setIsSavingUrl(true);
     setUrlFeedback(null);
     try {
-      await dataService.teachers.saveTeacherClassDetails({
+      const schedRes = await dataService.teachers.saveTeacherClassDetails({
         teacherId: currentUser.id,
         courseId: editingSchedule.courseId,
         scheduleId: editingSchedule.scheduleId,
@@ -220,11 +258,37 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
         timezone: timezoneInput
       });
 
-      setUrlFeedback({ type: 'success', message: 'Class schedule and meeting link updated successfully.' });
+      // Optimistically update classes in state immediately so UI updates without waiting
+      setClasses(prev => prev.map(c => {
+        if (c.course.id === editingSchedule.courseId) {
+          const updatedSched: CourseSchedule = {
+            ...(c.schedule || {}),
+            id: schedRes?.id || c.schedule?.id || ('sched_' + c.course.id),
+            course_id: c.course.id,
+            label: scheduleLabelInput.trim() || c.schedule?.label || 'Regular Class Schedule',
+            day_of_week: dayOfWeekInput.trim() || c.schedule?.day_of_week || 'Flexible / Online',
+            start_time: startTimeInput.trim() || c.schedule?.start_time || '18:00',
+            end_time: endTimeInput.trim() || c.schedule?.end_time || '20:00',
+            timezone: timezoneInput,
+            is_active: true,
+            meeting_url: trimmed || undefined
+          } as CourseSchedule;
+
+          return {
+            ...c,
+            meetingUrl: trimmed || undefined,
+            schedule: updatedSched
+          };
+        }
+        return c;
+      }));
+
+      setUrlFeedback({ type: 'success', message: 'Class schedule and Google Meet link updated successfully.' });
+      showActionToast('Google Meet link saved successfully!');
       await loadTeacherData(true);
       setTimeout(() => {
         setEditingSchedule(null);
-      }, 1000);
+      }, 500);
     } catch (err: any) {
       setUrlFeedback({ type: 'error', message: err.message || 'Failed to save class details.' });
     } finally {
@@ -232,14 +296,140 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
     }
   };
 
-  const handleSaveCourseDetails = async (courseId: string, updates: Partial<Course>) => {
+  const handleToggleCoursePublish = async (courseId: string, currentPublished: boolean) => {
+    const nextPublished = !currentPublished;
+    const targetStatus: 'draft' | 'published' = nextPublished ? 'published' : 'draft';
+
+    // Optimistically update classes in state immediately
+    setClasses(prev => prev.map(c => {
+      if (c.course.id === courseId) {
+        return {
+          ...c,
+          course: {
+            ...c.course,
+            status: targetStatus,
+            is_published: nextPublished
+          }
+        };
+      }
+      return c;
+    }));
+
+    try {
+      await dataService.updateCourse(courseId, {
+        status: targetStatus,
+        is_published: nextPublished
+      });
+      showActionToast(
+        nextPublished 
+          ? 'Course published successfully! Changes are live on student catalog.' 
+          : 'Course moved to draft mode.'
+      );
+      await loadTeacherData(true);
+    } catch (err: any) {
+      console.error('Failed to toggle publish status:', err);
+      showActionToast(err.message || 'Failed to update publication status.', 'error');
+      await loadTeacherData(true);
+    }
+  };
+
+  const handleSaveCourseDetails = async (
+    courseId: string, 
+    updates: Partial<Course>,
+    scheduleUpdates?: {
+      scheduleId?: string;
+      dayOfWeek?: string;
+      startTime?: string;
+      endTime?: string;
+      meetingUrl?: string;
+      scheduleLabel?: string;
+    }
+  ) => {
     setIsSavingCourseDetails(true);
     try {
-      await dataService.updateCourse(courseId, updates);
+      // 1. Update course details & publishing status
+      const savedCourse = await dataService.updateCourse(courseId, updates);
+
+      // 2. Update schedule if times/days/link were edited
+      let updatedMeetingUrl = scheduleUpdates?.meetingUrl;
+      if (scheduleUpdates && (scheduleUpdates.dayOfWeek || scheduleUpdates.meetingUrl !== undefined || scheduleUpdates.startTime)) {
+        try {
+          const schedRes = await dataService.teachers.saveTeacherClassDetails({
+            teacherId: currentUser.id,
+            courseId: courseId,
+            scheduleId: scheduleUpdates.scheduleId,
+            meetingUrl: scheduleUpdates.meetingUrl,
+            scheduleLabel: scheduleUpdates.scheduleLabel || 'Live Interactive Class',
+            dayOfWeek: scheduleUpdates.dayOfWeek || 'Saturdays',
+            startTime: scheduleUpdates.startTime || '10:00',
+            endTime: scheduleUpdates.endTime || '12:00',
+            timezone: currentUser.timezone || 'Africa/Lagos'
+          });
+          if (schedRes?.meeting_url) updatedMeetingUrl = schedRes.meeting_url;
+        } catch (schedErr) {
+          console.warn('[TeacherApp] Schedule update warning:', schedErr);
+        }
+      }
+
+      // 3. Persist local overrides immediately to prevent any sync latency rollback
+      const isPublished = updates.status === 'published' || updates.is_published === true;
+      if (updatedMeetingUrl) {
+        saveStoredMeetOverride(courseId, updatedMeetingUrl);
+      }
+      saveStoredCourseOverride(courseId, {
+        ...updates,
+        status: isPublished ? 'published' : (updates.status || 'draft'),
+        is_published: isPublished
+      });
+
+      // 4. Optimistically update local classes list
+      setClasses(prev => prev.map(c => {
+        if (c.course.id === courseId) {
+          const mergedCourse: Course = {
+            ...c.course,
+            ...savedCourse,
+            ...updates,
+            status: isPublished ? 'published' : (updates.status || 'draft'),
+            is_published: isPublished
+          };
+          return {
+            ...c,
+            course: mergedCourse,
+            meetingUrl: updatedMeetingUrl || c.meetingUrl,
+            schedule: c.schedule ? {
+              ...c.schedule,
+              meeting_url: updatedMeetingUrl || c.schedule.meeting_url,
+              label: scheduleUpdates?.scheduleLabel || c.schedule.label,
+              day_of_week: scheduleUpdates?.dayOfWeek || c.schedule.day_of_week,
+              start_time: scheduleUpdates?.startTime || c.schedule.start_time,
+              end_time: scheduleUpdates?.endTime || c.schedule.end_time
+            } : {
+              id: 'sched_' + courseId,
+              course_id: courseId,
+              label: scheduleUpdates?.scheduleLabel || 'Live Interactive Class',
+              day_of_week: scheduleUpdates?.dayOfWeek || 'Saturdays',
+              start_time: scheduleUpdates?.startTime || '10:00',
+              end_time: scheduleUpdates?.endTime || '12:00',
+              timezone: currentUser.timezone || 'Africa/Lagos',
+              is_active: true,
+              meeting_url: updatedMeetingUrl
+            } as CourseSchedule
+          };
+        }
+        return c;
+      }));
+
+      // Close modal and notify user immediately
+      setManagingItem(null);
+      showActionToast(
+        isPublished 
+          ? 'Course published successfully! Changes are live on student catalog.' 
+          : 'Course changes saved successfully!'
+      );
       await loadTeacherData(true);
-      setManagingCourse(null);
     } catch (err: any) {
       console.error('Failed to update course details:', err);
+      showActionToast(err.message || 'Failed to update course details.', 'error');
       throw err;
     } finally {
       setIsSavingCourseDetails(false);
@@ -298,7 +488,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
       <TeacherCourseWorkspace
         course={workspaceCourse.course}
         currentUser={currentUser}
-        onBack={() => setWorkspaceCourse(null)}
+        onBack={() => {
+          setWorkspaceCourse(null);
+          loadTeacherData(true);
+        }}
         scheduleLabel={workspaceCourse.scheduleLabel}
         scheduleId={workspaceCourse.scheduleId}
       />
@@ -679,11 +872,28 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               className="bg-white p-5 rounded-3xl border border-[#0A9D8F]/25 shadow-2xs space-y-3.5 flex flex-col justify-between hover:border-[#0A9D8F] transition-all"
                             >
                               <div className="space-y-3">
-                                {/* Top Category and Student count row */}
+                                {/* Top Category, Status and Student count row */}
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0A9D8F] bg-[#E6F5F4] px-2.5 py-1 rounded-md">
-                                    {item.course.category || 'DATA SCIENCE'}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleCoursePublish(item.course.id, item.course.is_published || item.course.status === 'published')}
+                                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
+                                        item.course.is_published || item.course.status === 'published'
+                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                                          : 'bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200'
+                                      }`}
+                                      title={item.course.is_published || item.course.status === 'published' ? 'Click to unpublish course' : 'Click to publish course live'}
+                                    >
+                                      <span>{item.course.is_published || item.course.status === 'published' ? '● Published' : '○ Draft'}</span>
+                                      <span className="text-[9px] opacity-75 underline ml-0.5">
+                                        {item.course.is_published || item.course.status === 'published' ? 'Unpublish' : 'Publish'}
+                                      </span>
+                                    </button>
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0A9D8F] bg-[#E6F5F4] px-2 py-0.5 rounded-md">
+                                      {item.course.category || 'Course'}
+                                    </span>
+                                  </div>
 
                                   <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-50 border border-[#0A9D8F]/20 px-2.5 py-0.5 rounded-full">
                                     <Users className="w-3 h-3 text-gray-500" />
@@ -752,7 +962,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => setManagingCourse(item.course)}
+                                  onClick={() => setManagingItem(item)}
                                   className="col-span-3 py-2.5 px-2 rounded-xl border border-[#0A9D8F]/30 bg-white hover:bg-[#E6F5F4]/40 text-gray-800 text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
                                   title="Manage Course Duration, Level & Syllabus"
                                 >
@@ -943,7 +1153,22 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                           {/* Course Card Header */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0A9D8F]/15 pb-3">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCoursePublish(item.course.id, item.course.is_published || item.course.status === 'published')}
+                                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
+                                    item.course.is_published || item.course.status === 'published'
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                                      : 'bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200'
+                                  }`}
+                                  title={item.course.is_published || item.course.status === 'published' ? 'Click to unpublish course' : 'Click to publish course live'}
+                                >
+                                  <span>{item.course.is_published || item.course.status === 'published' ? '● Published' : '○ Draft'}</span>
+                                  <span className="text-[9px] opacity-75 underline ml-0.5">
+                                    {item.course.is_published || item.course.status === 'published' ? 'Unpublish' : 'Publish'}
+                                  </span>
+                                </button>
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0A9D8F] bg-[#E6F5F4] px-2.5 py-0.5 rounded-md">
                                   {item.course.category || 'Course'}
                                 </span>
@@ -960,7 +1185,21 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                               <button
                                 type="button"
-                                onClick={() => setManagingCourse(item.course)}
+                                onClick={() => handleToggleCoursePublish(item.course.id, item.course.is_published || item.course.status === 'published')}
+                                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+                                  item.course.is_published || item.course.status === 'published'
+                                    ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                                }`}
+                                title={item.course.is_published || item.course.status === 'published' ? 'Move course back to draft' : 'Make course live on catalog'}
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>{item.course.is_published || item.course.status === 'published' ? 'Unpublish' : 'Publish'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setManagingItem(item)}
                                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-50 text-[#0A9D8F] border border-[#0A9D8F]/30 text-xs font-bold hover:bg-teal-100 transition-colors shadow-2xs cursor-pointer"
                                 title="Set course duration, level, description, and what students will learn"
                               >
@@ -1448,9 +1687,11 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
 
       {/* Instructor Course Details & Syllabus Manager Modal */}
       <TeacherCourseManagerModal
-        isOpen={!!managingCourse}
-        course={managingCourse}
-        onClose={() => setManagingCourse(null)}
+        isOpen={!!managingItem}
+        course={managingItem?.course || null}
+        schedule={managingItem?.schedule}
+        initialMeetingUrl={managingItem?.meetingUrl || managingItem?.schedule?.meeting_url}
+        onClose={() => setManagingItem(null)}
         onSave={handleSaveCourseDetails}
         isSaving={isSavingCourseDetails}
       />
@@ -1462,6 +1703,33 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
         currentUser={currentUser}
         onRefreshNotifications={() => loadTeacherData(true)}
       />
+
+      {/* Floating Action Confirmation Toast */}
+      {actionToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border ${
+            actionToast.type === 'success'
+              ? 'bg-emerald-950 text-white border-emerald-500/40'
+              : 'bg-red-950 text-white border-red-500/40'
+          }`}>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+              actionToast.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+            }`}>
+              {actionToast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            </div>
+            <div className="flex-1 text-xs font-semibold leading-snug">
+              {actionToast.message}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActionToast(null)}
+              className="p-1 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { realtimeSync } from './realtimeSync';
+import { generateValidUUID } from './dataService';
 import { 
   CourseModule, CourseLesson, LessonMaterial, ClassRecording, 
   ClassSession, Quiz, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer, 
@@ -120,13 +121,13 @@ export const learningService = {
         description: description?.trim() || null,
         sort_order: nextOrder,
       })
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('course_modules', 'INSERT');
-    return { ...data, lessons: [] };
+    const createdMod = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: 'temp', course_id: courseId, title, sort_order: nextOrder };
+    return { ...createdMod, lessons: [] };
   },
 
   /**
@@ -142,13 +143,13 @@ export const learningService = {
         updated_at: new Date().toISOString()
       })
       .eq('id', moduleId)
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('course_modules', 'UPDATE');
-    return data;
+    const updatedMod = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: moduleId, ...updates };
+    return updatedMod as CourseModule;
   },
 
   /**
@@ -192,13 +193,13 @@ export const learningService = {
         video_url: videoUrl?.trim() || null,
         sort_order: nextOrder,
       })
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('course_lessons', 'INSERT');
-    return { ...data, materials: [], quizzes: [] };
+    const createdLesson = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: 'temp', module_id: moduleId, title, sort_order: nextOrder };
+    return { ...createdLesson, materials: [], quizzes: [] };
   },
 
   /**
@@ -214,13 +215,13 @@ export const learningService = {
         updated_at: new Date().toISOString()
       })
       .eq('id', lessonId)
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('course_lessons', 'UPDATE');
-    return data;
+    const updatedLesson = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: lessonId, ...updates };
+    return updatedLesson as CourseLesson;
   },
 
   /**
@@ -302,13 +303,13 @@ export const learningService = {
         file_size: file.size,
         created_by: userId || null
       })
-      .select()
-      .single();
+      .select();
 
     if (dbError) throw new Error(dbError.message);
 
     realtimeSync.notifyMutation('lesson_materials', 'INSERT');
-    return data;
+    const createdMat = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: 'temp', lesson_id: lessonId, title, file_url: publicUrl };
+    return createdMat as LessonMaterial;
   },
 
   /**
@@ -379,13 +380,13 @@ export const learningService = {
         notes: session.notes?.trim() || null,
         status: 'scheduled'
       })
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('class_sessions', 'INSERT');
-    return data;
+    const createdSession = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: 'temp', course_id: session.course_id, start_time: session.start_time, end_time: session.end_time };
+    return createdSession as ClassSession;
   },
 
   /**
@@ -401,13 +402,13 @@ export const learningService = {
         updated_at: new Date().toISOString()
       })
       .eq('id', sessionId)
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('class_sessions', 'UPDATE');
-    return data;
+    const updatedSession = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: sessionId, ...updates };
+    return updatedSession as ClassSession;
   },
 
   /**
@@ -455,13 +456,13 @@ export const learningService = {
         duration: recording.duration?.trim() || null,
         created_by: recording.userId || null
       })
-      .select()
-      .single();
+      .select();
 
     if (error) throw new Error(error.message);
 
     realtimeSync.notifyMutation('class_recordings', 'INSERT');
-    return data;
+    const createdRec = (data && Array.isArray(data) && data.length > 0) ? data[0] : { id: 'temp', course_id: recording.course_id, title: recording.title, recording_url: recording.recording_url };
+    return createdRec as ClassRecording;
   },
 
   // ====================================================================
@@ -506,7 +507,7 @@ export const learningService = {
         .from('quizzes')
         .select('*')
         .eq('id', quizId)
-        .single();
+        .maybeSingle();
 
       if (qError || !quiz) return null;
 
@@ -572,7 +573,7 @@ export const learningService = {
     const totalMarks = parsedQuestions.reduce((sum, q) => sum + (q.marks || 1), 0);
 
     // 1. Insert Quiz header
-    const { data: newQuiz, error: quizError } = await supabase
+    const { data: quizData, error: quizError } = await supabase
       .from('quizzes')
       .insert({
         course_id: quizMeta.course_id,
@@ -587,10 +588,11 @@ export const learningService = {
         is_published: quizMeta.is_published ?? true,
         created_by: quizMeta.userId || null
       })
-      .select()
-      .single();
+      .select();
 
     if (quizError) throw new Error(quizError.message);
+    const newQuiz = (quizData && Array.isArray(quizData) && quizData.length > 0) ? quizData[0] : quizData;
+    if (!newQuiz?.id) throw new Error('Failed to create quiz record.');
 
     // 2. Insert Questions and Options
     for (let i = 0; i < parsedQuestions.length; i++) {
@@ -606,10 +608,11 @@ export const learningService = {
           marks: pq.marks || 1,
           explanation: pq.explanation?.trim() || null
         })
-        .select()
-        .single();
+        .select();
 
-      if (qInsertError) {
+      const createdQ = (qRecord && Array.isArray(qRecord) && qRecord.length > 0) ? qRecord[0] : null;
+
+      if (qInsertError || !createdQ) {
         console.error('[LearningService] Failed to insert question:', qInsertError);
         continue;
       }
@@ -617,7 +620,7 @@ export const learningService = {
       // Insert Options
       if (pq.options && pq.options.length > 0) {
         const optionRows = pq.options.map(opt => ({
-          question_id: qRecord.id,
+          question_id: createdQ.id,
           option_key: opt.key.trim().toUpperCase(),
           option_text: opt.text.trim()
         }));
@@ -678,7 +681,7 @@ export const learningService = {
       .from('quizzes')
       .select('pass_percentage, total_marks')
       .eq('id', quizId)
-      .single();
+      .maybeSingle();
 
     const passPct = quizMeta?.pass_percentage || 50;
 
@@ -720,21 +723,24 @@ export const learningService = {
         passed,
         submitted_at: new Date().toISOString()
       })
-      .select()
-      .single();
+      .select();
 
     if (attError) throw new Error(attError.message);
 
+    const savedAttempt = (attempt && Array.isArray(attempt) && attempt.length > 0)
+      ? attempt[0]
+      : { id: generateValidUUID(), quiz_id: quizId, student_id: studentId, course_id: courseId, score, percentage, passed };
+
     // 3. Insert individual answer rows
     const answerRows = gradedAnswers.map(ga => ({
-      attempt_id: attempt.id,
+      attempt_id: savedAttempt.id,
       ...ga
     }));
 
     await supabase.from('quiz_answers').insert(answerRows);
 
     realtimeSync.notifyMutation('quiz_attempts', 'INSERT');
-    return { ...attempt, answers: gradedAnswers as any };
+    return { ...savedAttempt, answers: gradedAnswers as any };
   },
 
   /**

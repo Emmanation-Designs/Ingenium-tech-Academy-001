@@ -96,9 +96,17 @@ CREATE POLICY "Admins and teachers can view all courses"
     USING (public.is_admin() OR public.is_teacher());
 
 DROP POLICY IF EXISTS "Only Admins can write courses" ON public.courses;
-CREATE POLICY "Only Admins can write courses"
+DROP POLICY IF EXISTS "Admins can manage all courses" ON public.courses;
+DROP POLICY IF EXISTS "Teachers and Admins can update courses" ON public.courses;
+
+CREATE POLICY "Admins can manage all courses"
     ON public.courses FOR ALL
     USING (public.is_admin());
+
+CREATE POLICY "Teachers and Admins can update courses"
+    ON public.courses FOR UPDATE
+    USING (public.is_admin() OR public.is_teacher())
+    WITH CHECK (public.is_admin() OR public.is_teacher());
 
 
 -- ====================================================================
@@ -115,9 +123,17 @@ CREATE POLICY "Admins and teachers can view all schedules"
     USING (public.is_admin() OR public.is_teacher());
 
 DROP POLICY IF EXISTS "Only Admins can write course schedules" ON public.course_schedules;
-CREATE POLICY "Only Admins can write course schedules"
+DROP POLICY IF EXISTS "Admins can manage all course schedules" ON public.course_schedules;
+DROP POLICY IF EXISTS "Teachers and Admins can update course schedules" ON public.course_schedules;
+
+CREATE POLICY "Admins can manage all course schedules"
     ON public.course_schedules FOR ALL
     USING (public.is_admin());
+
+CREATE POLICY "Teachers and Admins can update course schedules"
+    ON public.course_schedules FOR UPDATE
+    USING (public.is_admin() OR public.is_teacher())
+    WITH CHECK (public.is_admin() OR public.is_teacher());
 
 
 -- ====================================================================

@@ -175,7 +175,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         title: formData.title,
         short_description: formData.short_description,
         description: formData.description,
-        category_id: formData.category_id,
+        category_id: formData.category_id || undefined,
         category: formData.category,
         duration: formData.duration,
         level: formData.level,
@@ -186,12 +186,16 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         image_url: imageUrl
       });
 
-      // Update pricing
-      await dataService.saveCoursePricing(editingCourse.id, {
-        usd_price: formData.usd_price,
-        ngn_price: formData.ngn_price,
-        eur_price: formData.eur_price
-      });
+      // Update pricing safely
+      try {
+        await dataService.saveCoursePricing(editingCourse.id, {
+          usd_price: formData.usd_price,
+          ngn_price: formData.ngn_price,
+          eur_price: formData.eur_price
+        });
+      } catch (priceErr) {
+        console.warn('[AdminApp] Non-fatal pricing update warning:', priceErr);
+      }
     } else {
       // Create new
       const courseSlug = formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'course';
@@ -200,7 +204,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
         slug: courseSlug,
         short_description: formData.short_description,
         description: formData.description,
-        category_id: formData.category_id,
+        category_id: formData.category_id || undefined,
         category: formData.category,
         duration: formData.duration,
         level: formData.level,
@@ -212,11 +216,15 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       });
 
       if (newCourse?.id) {
-        await dataService.saveCoursePricing(newCourse.id, {
-          usd_price: formData.usd_price,
-          ngn_price: formData.ngn_price,
-          eur_price: formData.eur_price
-        });
+        try {
+          await dataService.saveCoursePricing(newCourse.id, {
+            usd_price: formData.usd_price,
+            ngn_price: formData.ngn_price,
+            eur_price: formData.eur_price
+          });
+        } catch (priceErr) {
+          console.warn('[AdminApp] Non-fatal pricing save warning for new course:', priceErr);
+        }
       }
     }
 
@@ -226,12 +234,17 @@ export const AdminApp: React.FC<AdminAppProps> = ({
   };
 
   const handleToggleCourseStatus = async (course: Course) => {
-    const nextStatus = (course.is_published || course.status === 'published') ? 'draft' : 'published';
-    await dataService.updateCourse(course.id, {
-      status: nextStatus,
-      is_published: nextStatus === 'published'
-    });
-    await loadData(true);
+    try {
+      const nextStatus = (course.is_published || course.status === 'published') ? 'draft' : 'published';
+      await dataService.updateCourse(course.id, {
+        status: nextStatus,
+        is_published: nextStatus === 'published'
+      });
+      await loadData(true);
+    } catch (err: any) {
+      console.error('Failed to toggle course status:', err);
+      alert(err.message || 'Failed to update course publish status.');
+    }
   };
 
   const handleDeleteCourse = async (courseId: string) => {

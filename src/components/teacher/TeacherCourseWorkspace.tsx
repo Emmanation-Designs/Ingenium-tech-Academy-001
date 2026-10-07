@@ -5,6 +5,7 @@ import {
 } from '../../types';
 import { learningService } from '../../services/learningService';
 import { realtimeSync } from '../../services/realtimeSync';
+import { dataService, saveStoredMeetOverride, getStoredMeetOverride } from '../../services/dataService';
 import { parseQuizText, ParsedQuestion, QuizParseResult } from '../../lib/quizParser';
 import { 
   ChevronLeft, Plus, BookOpen, Video, FileText, CheckCircle, 
@@ -72,6 +73,12 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
   const [sessionMeetUrl, setSessionMeetUrl] = useState<string>('');
   const [sessionNotes, setSessionNotes] = useState<string>('');
   const [savingSession, setSavingSession] = useState<boolean>(false);
+
+  // Permanent course Google Meet link state
+  const [courseMeetUrl, setCourseMeetUrl] = useState<string>(() => {
+    return getStoredMeetOverride(course.id) || '';
+  });
+  const [savingMeetUrl, setSavingMeetUrl] = useState<boolean>(false);
 
   // Recording Modal state
   const [showRecordingModal, setShowRecordingModal] = useState<boolean>(false);
@@ -308,6 +315,24 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
         meeting_url: sessionMeetUrl,
         notes: sessionNotes
       });
+
+      // Synchronize meeting URL with course schedule and local storage
+      if (sessionMeetUrl && sessionMeetUrl.trim()) {
+        const cleanUrl = sessionMeetUrl.trim();
+        setCourseMeetUrl(cleanUrl);
+        saveStoredMeetOverride(course.id, cleanUrl);
+        try {
+          await dataService.teachers.saveTeacherClassDetails({
+            teacherId: currentUser.id,
+            courseId: course.id,
+            scheduleId: scheduleId,
+            meetingUrl: cleanUrl
+          });
+        } catch (syncErr) {
+          console.warn('[Workspace] Meeting URL sync notice:', syncErr);
+        }
+      }
+
       showToast('Live class session scheduled.');
       setShowSessionModal(false);
       setSessionTitle('');
@@ -320,6 +345,31 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
       showToast(err.message || 'Failed to schedule session', 'error');
     } finally {
       setSavingSession(false);
+    }
+  };
+
+  const handleSaveCourseMeetUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUrl = courseMeetUrl.trim();
+    if (cleanUrl && !cleanUrl.startsWith('https://meet.google.com/') && !cleanUrl.startsWith('https://')) {
+      showToast('Please provide a valid URL (e.g. https://meet.google.com/xxx-yyyy-zzz)', 'error');
+      return;
+    }
+
+    try {
+      setSavingMeetUrl(true);
+      saveStoredMeetOverride(course.id, cleanUrl);
+      await dataService.teachers.saveTeacherClassDetails({
+        teacherId: currentUser.id,
+        courseId: course.id,
+        scheduleId: scheduleId,
+        meetingUrl: cleanUrl
+      });
+      showToast(cleanUrl ? 'Course Google Meet link updated successfully!' : 'Google Meet link removed.');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save Google Meet link.', 'error');
+    } finally {
+      setSavingMeetUrl(false);
     }
   };
 
@@ -773,6 +823,56 @@ export const TeacherCourseWorkspace: React.FC<TeacherCourseWorkspaceProps> = ({
                       <span>Attach Recording</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Course Google Meet Link Panel */}
+                <div className="bg-[#F0FAF8] border border-[#0A9D8F]/30 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#E6F5F4] text-[#0A9D8F] flex items-center justify-center shrink-0">
+                        <Video className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-gray-950 uppercase tracking-wider">
+                          Course Google Meet Class Link
+                        </h3>
+                        <p className="text-[11px] text-gray-500">
+                          Default live room URL visible to students on their dashboard for scheduled classes.
+                        </p>
+                      </div>
+                    </div>
+                    {courseMeetUrl && (
+                      <button
+                        type="button"
+                        onClick={() => navigateSameTab(courseMeetUrl)}
+                        className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Test & Open Meet</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <form onSubmit={handleSaveCourseMeetUrl} className="flex flex-col sm:flex-row items-center gap-2">
+                    <div className="relative flex-1 w-full">
+                      <Video className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="url"
+                        value={courseMeetUrl}
+                        onChange={(e) => setCourseMeetUrl(e.target.value)}
+                        placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                        className="w-full pl-9 pr-3 py-2 bg-white border border-[#0A9D8F]/30 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] font-mono"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={savingMeetUrl}
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{savingMeetUrl ? 'Saving...' : 'Save Meet Link'}</span>
+                    </button>
+                  </form>
                 </div>
 
                 {/* Sessions List */}
