@@ -645,7 +645,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
         
         {/* DETAILED OVERLAY 2: CHOOSE CLASS TIME */}
         {selectedCourseForDetails && showClassTimeSelector && (
-          <div className="absolute inset-0 bg-white z-50 flex flex-col justify-between animate-in slide-in-from-right duration-250">
+          <div className="absolute inset-0 bg-white z-[60] flex flex-col justify-between animate-in slide-in-from-right duration-250">
             {/* Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-[#F2F2F2] flex items-center justify-between pt-safe">
               <button 
@@ -753,7 +753,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button 
                     onClick={handleSelectCourse}
-                    disabled={loading || !(schedulesMap[selectedCourseForDetails.id] || []).some(s => s.id === chosenScheduleId || !s.id)}
+                    disabled={loading || ((schedulesMap[selectedCourseForDetails.id] || []).length > 0 && !chosenScheduleId)}
                     className="w-full py-3.5 rounded-xl border border-[#0A9D8F] text-[#0A9D8F] hover:bg-[#E6F5F4]/60 text-xs font-semibold transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center"
                   >
                     {loading ? 'Adding...' : 'Add to Selection'}
@@ -792,7 +792,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* DETAILED OVERLAY 1: COURSE DETAILS */}
         {selectedCourseForDetails && !showClassTimeSelector && (
-          <div className="absolute inset-0 bg-white z-40 flex flex-col justify-between animate-in slide-in-from-right duration-250">
+          <div className="absolute inset-0 bg-white z-50 flex flex-col justify-between animate-in slide-in-from-right duration-250">
             {/* Scrollable Details */}
             <div className="flex-1 overflow-y-auto pb-6">
               
@@ -976,7 +976,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                     <button
                       type="button"
                       onClick={() => toggleFavorite(selectedCourseForDetails.id)}
-                      className={`px-3 py-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                      className={`p-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                         isFavorite(selectedCourseForDetails.id)
                           ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
                           : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100 hover:text-red-500'
@@ -984,12 +984,10 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                       title={isFavorite(selectedCourseForDetails.id) ? "Remove from favorites" : "Add to favorites"}
                     >
                       <Heart className={`w-4 h-4 transition-colors ${isFavorite(selectedCourseForDetails.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                      <span className="hidden sm:inline">
-                        {isFavorite(selectedCourseForDetails.id) ? 'Favorited' : 'Add to Favorites'}
-                      </span>
                     </button>
 
                     <button 
+                      type="button"
                       onClick={() => {
                         const courseScheds = schedulesMap[selectedCourseForDetails.id] || [];
                         if (courseScheds.length > 0) {
@@ -997,9 +995,27 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                         }
                         setShowClassTimeSelector(true);
                       }}
-                      className="px-4 sm:px-5 py-3.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs sm:text-sm font-semibold transition-all text-center shadow-sm cursor-pointer active:scale-98"
+                      className="px-3 sm:px-4 py-3 rounded-xl border border-[#0A9D8F] text-[#0A9D8F] hover:bg-[#E6F5F4]/60 text-xs font-semibold transition-all text-center cursor-pointer active:scale-98 shrink-0"
                     >
-                      Choose Class Time
+                      {(schedulesMap[selectedCourseForDetails.id] || []).length > 0 ? 'Class Time' : 'Select'}
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const courseScheds = schedulesMap[selectedCourseForDetails.id] || [];
+                        const firstSched = courseScheds[0];
+                        setSingleCourseForCheckout({
+                          course: selectedCourseForDetails,
+                          scheduleId: firstSched?.id,
+                          scheduleLabel: firstSched?.label || 'Standard Schedule'
+                        });
+                        setShowCheckoutModal(true);
+                      }}
+                      className="px-4 sm:px-5 py-3 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs sm:text-sm font-semibold transition-all text-center shadow-sm cursor-pointer active:scale-98 flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Buy Now</span>
                     </button>
                   </div>
                 </>
@@ -1230,6 +1246,30 @@ export const StudentApp: React.FC<StudentAppProps> = ({
                                 </span>
                               )}
                             </div>
+
+                            {!isEnrolledInCourse(course.id) && (
+                              <div className="pt-2.5 mt-1 border-t border-zinc-100 flex items-center justify-between gap-2">
+                                <span className="text-[11px] text-zinc-400 font-medium">View details</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const courseScheds = schedulesMap[course.id] || [];
+                                    const firstSched = courseScheds[0];
+                                    setSingleCourseForCheckout({
+                                      course,
+                                      scheduleId: firstSched?.id,
+                                      scheduleLabel: firstSched?.label || 'Standard Schedule'
+                                    });
+                                    setShowCheckoutModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-98"
+                                >
+                                  <CreditCard className="w-3 h-3" />
+                                  <span>Buy Course</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -1267,8 +1307,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* MAIN TAB: FAVORITES */}
         {activeTab === 'favorites' && (
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between sticky top-0 bg-white z-10 pt-safe">
+          <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
+            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between sticky top-0 bg-white z-10 pt-safe shrink-0">
               <div className="flex items-center gap-2.5">
                 <button 
                   onClick={() => setActiveTab('home')}
@@ -1290,7 +1330,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
               <BrandLogo size="xs" />
             </div>
 
-            <div className="p-4 sm:px-6 py-4 flex-1 overflow-y-auto">
+            <div className="p-4 sm:px-6 py-4 flex-1 overflow-y-auto overscroll-contain pb-28">
               {favoriteCourses.length === 0 ? (
                 <div className="p-10 text-center bg-zinc-50 border border-dashed border-zinc-200 rounded-3xl space-y-3 max-w-sm mx-auto my-8">
                   <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-400 flex items-center justify-center mx-auto">
@@ -1401,8 +1441,8 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* MAIN TAB 2: MY SELECTION */}
         {activeTab === 'selections' && (
-          <div className="flex-1 flex flex-col bg-white">
-            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between pt-safe">
+          <div className="flex-1 flex flex-col bg-white overflow-hidden h-full">
+            <div className="px-4 sm:px-6 py-4 border-b border-[#F5F5F5] flex items-center justify-between pt-safe shrink-0">
               <div className="flex items-center gap-2.5">
                 <BrandLogo size="xs" />
                 <h1 className="text-base font-semibold text-zinc-900">My Selection</h1>
@@ -1560,7 +1600,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
             )}
 
             {/* Bottom Waiting Alert Box */}
-            <div className="p-4 mx-4 sm:mx-6 mb-6 bg-zinc-50 border border-zinc-200/70 rounded-2xl">
+            <div className="p-4 mx-4 sm:mx-6 mb-24 bg-zinc-50 border border-zinc-200/70 rounded-2xl shrink-0">
               <p className="text-xs font-normal text-zinc-500 text-center leading-relaxed">
                 Courses are automatically enrolled upon completed payment, or can be reviewed and approved by academy admins.
               </p>
@@ -1977,7 +2017,7 @@ export const StudentApp: React.FC<StudentAppProps> = ({
 
         {/* Settings Modal */}
         {showSettingsModal && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl w-full max-w-md shadow-xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90vh]">
               {/* Header */}
               <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
