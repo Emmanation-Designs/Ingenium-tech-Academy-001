@@ -149,13 +149,15 @@ export default async function handler(req: any, res: any) {
     const baseUrl = process.env.APP_URL || `${proto}://${host}`;
     const callbackUrl = `${baseUrl}/payment/callback?order_id=${encodeURIComponent(newOrder.id)}&ref=${encodeURIComponent(paymentReference)}`;
 
-    // 7. Call the REAL Wittypay API: POST https://wittypay.online/api/merchant/v1/payments
+    // 7. Call the REAL Wittypay API: POST https://wittypay.co/api/merchant/v1/payments
+    const wittypayBaseUrl = (process.env.WITTYPAY_API_BASE_URL || 'https://wittypay.co/api/merchant/v1').replace(/\/+$/, '');
+    const notifyUrl = `${baseUrl}/api/wittypay/webhook`;
     let wittypayResponse: Response;
     let responseText = '';
     let wittypayJson: any = null;
 
     try {
-      wittypayResponse = await fetch('https://wittypay.online/api/merchant/v1/payments', {
+      wittypayResponse = await fetch(`${wittypayBaseUrl}/payments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,16 +169,12 @@ export default async function handler(req: any, res: any) {
           currency: 'NGN',
           reference: paymentReference,
           callback_url: callbackUrl,
-          env: wittypayEnv,
-          environment: wittypayEnv,
+          notify_url: notifyUrl,
+          title: verifiedOrderItems.length === 1
+            ? verifiedOrderItems[0].course_title
+            : `Ingenium Courses (${verifiedOrderItems.length})`,
           customer_email: studentEmail,
           customer_name: studentName || 'Student',
-          email: studentEmail,
-          name: studentName || 'Student',
-          customer: {
-            email: studentEmail,
-            name: studentName || 'Student',
-          },
           description: `Ingenium Tech Academy Course Purchase (${orderNumber})`,
           metadata: {
             order_id: newOrder.id,

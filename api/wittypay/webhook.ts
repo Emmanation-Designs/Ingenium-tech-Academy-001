@@ -109,12 +109,13 @@ export default async function handler(req: any, res: any) {
     }
 
     // 3. GET /payments?ref=REFERENCE verification with Wittypay API
+    const wittypayBaseUrl = (process.env.WITTYPAY_API_BASE_URL || 'https://wittypay.co/api/merchant/v1').replace(/\/+$/, '');
     let verifiedGatewayData: any = null;
     let isGatewayVerified = false;
 
     if (secretKey) {
       try {
-        const verifyRes = await fetch(`https://wittypay.online/api/merchant/v1/payments?ref=${encodeURIComponent(reference)}`, {
+        const verifyRes = await fetch(`${wittypayBaseUrl}/payments?ref=${encodeURIComponent(reference)}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${secretKey}`,
@@ -135,8 +136,8 @@ export default async function handler(req: any, res: any) {
 
     // 4. Amount, Reference, and Currency Verification
     const reportedCurrency = (
-      verifiedGatewayData?.currency || 
       verifiedGatewayData?.data?.currency || 
+      verifiedGatewayData?.currency || 
       data.currency || 
       payload.currency || 
       'NGN'
@@ -148,10 +149,10 @@ export default async function handler(req: any, res: any) {
     }
 
     const reportedAmount = Number(
-      verifiedGatewayData?.amount || 
-      verifiedGatewayData?.data?.amount || 
-      data.amount || 
-      payload.amount || 
+      verifiedGatewayData?.data?.amount ?? 
+      verifiedGatewayData?.amount ?? 
+      data.amount ?? 
+      payload.amount ?? 
       0
     );
 
@@ -163,8 +164,8 @@ export default async function handler(req: any, res: any) {
     }
 
     const reportedStatus = (
-      verifiedGatewayData?.status || 
       verifiedGatewayData?.data?.status || 
+      verifiedGatewayData?.status || 
       data.status || 
       payload.status || 
       ''

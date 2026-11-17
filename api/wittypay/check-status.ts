@@ -55,11 +55,12 @@ export default async function handler(req: any, res: any) {
 
     // If still pending, query the Wittypay API using server-side secret key: GET /payments?ref=REFERENCE
     const secretKey = process.env.WITTYPAY_SECRET_KEY;
+    const wittypayBaseUrl = (process.env.WITTYPAY_API_BASE_URL || 'https://wittypay.co/api/merchant/v1').replace(/\/+$/, '');
     const paymentRef = order.payment_reference || order.wittypay_reference || ref;
 
     if (secretKey && paymentRef) {
       try {
-        const verifyRes = await fetch(`https://wittypay.online/api/merchant/v1/payments?ref=${encodeURIComponent(paymentRef)}`, {
+        const verifyRes = await fetch(`${wittypayBaseUrl}/payments?ref=${encodeURIComponent(paymentRef)}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${secretKey}`,
@@ -69,12 +70,12 @@ export default async function handler(req: any, res: any) {
 
         if (verifyRes.ok) {
           const verifyData = await verifyRes.json();
-          const gatewayStatus = (verifyData.status || verifyData.data?.status || '').toLowerCase();
+          const gatewayStatus = (verifyData.data?.status || verifyData.status || '').toLowerCase();
           const isPaid = gatewayStatus === 'completed' || gatewayStatus === 'success' || gatewayStatus === 'paid';
 
           // Verify currency and amount
-          const gatewayCurrency = (verifyData.currency || verifyData.data?.currency || 'NGN').toUpperCase();
-          const gatewayAmount = Number(verifyData.amount || verifyData.data?.amount || 0);
+          const gatewayCurrency = (verifyData.data?.currency || verifyData.currency || 'NGN').toUpperCase();
+          const gatewayAmount = Number(verifyData.data?.amount ?? verifyData.amount ?? 0);
 
           if (isPaid && gatewayCurrency === order.currency && (gatewayAmount === 0 || Math.abs(gatewayAmount - Number(order.total_amount)) <= 5)) {
             const now = new Date().toISOString();
