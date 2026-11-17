@@ -166,6 +166,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
   // Aggregate stats
   const totalCourses = useMemo(() => new Set(classes.map(c => c.course.id)).size, [classes]);
   const totalSchedules = useMemo(() => classes.reduce((acc, c) => acc + (c.schedules?.length || (c.schedule ? 1 : 0)), 0), [classes]);
+  const draftClasses = useMemo(
+    () => classes.filter(c => !c.course.is_published && c.course.status !== 'published'),
+    [classes]
+  );
   
   // Unique active students
   const allStudents = useMemo(() => {
@@ -815,6 +819,53 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                     </div>
                   </div>
 
+                  {/* Draft Courses Awaiting Course Info & Publishing */}
+                  {draftClasses.length > 0 && (
+                    <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-2xs space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h2 className="text-sm font-bold text-gray-950">
+                              Draft Courses Awaiting Your Course Info ({draftClasses.length})
+                            </h2>
+                            <p className="text-xs text-gray-600">
+                              Fill in course duration, skill level, class schedule, Google Meet link, and syllabus details, then publish to make them available to students.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {draftClasses.map((draftItem, dIdx) => (
+                          <div
+                            key={draftItem.course.id + '-' + dIdx}
+                            className="bg-white rounded-2xl border border-amber-200 p-3.5 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                                Draft • Hidden from Students
+                              </span>
+                              <p className="text-xs font-bold text-gray-950 truncate mt-1">
+                                {draftItem.course.title}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setManagingItem(draftItem)}
+                              className="px-3.5 py-2 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white text-xs font-bold transition-colors shrink-0 cursor-pointer shadow-2xs flex items-center gap-1.5"
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5" />
+                              <span>Complete Info & Publish</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Section: Active Class Schedules & Google Meet Links */}
                   <div className="bg-white p-5 sm:p-6 rounded-3xl border border-[#0A9D8F]/25 shadow-xs space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#0A9D8F]/15 pb-3">
@@ -964,10 +1015,10 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                                   type="button"
                                   onClick={() => setManagingItem(item)}
                                   className="col-span-3 py-2.5 px-2 rounded-xl border border-[#0A9D8F]/30 bg-white hover:bg-[#E6F5F4]/40 text-gray-800 text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
-                                  title="Manage Course Duration, Level & Syllabus"
+                                  title="Set Course Duration, Level, Description & Publish Status"
                                 >
                                   <SlidersHorizontal className="w-3 h-3 text-[#0A9D8F]" />
-                                  <span>Manage</span>
+                                  <span>{!(item.course.is_published || item.course.status === 'published') ? 'Course Info' : 'Edit Info'}</span>
                                 </button>
 
                                 <button
@@ -1204,7 +1255,7 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                                 title="Set course duration, level, description, and what students will learn"
                               >
                                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                                <span>Manage Course</span>
+                                <span>{!(item.course.is_published || item.course.status === 'published') ? 'Complete Info & Publish' : 'Edit Course Info'}</span>
                               </button>
 
                               <button
@@ -1232,6 +1283,21 @@ export const TeacherApp: React.FC<TeacherAppProps> = ({
                               )}
                             </div>
                           </div>
+
+                          {!(item.course.is_published || item.course.status === 'published') && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                              <span className="text-amber-900 font-medium">
+                                This course is currently a <strong>Draft</strong> and hidden from students. Complete the course details & syllabus, then publish it when ready.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setManagingItem(item)}
+                                className="px-3 py-1.5 rounded-xl bg-[#0A9D8F] hover:bg-[#087A6F] text-white font-bold text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                              >
+                                Fill Info & Publish
+                              </button>
+                            </div>
+                          )}
 
                           {/* Live Panels: Class Schedule & Google Meet Link */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

@@ -158,6 +158,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
     eur_price: number;
     heroFile: File | null;
     removeImage: boolean;
+    assignedTeacherId?: string;
   }) => {
     let imageUrl = editingCourse?.image_url || '';
 
@@ -196,6 +197,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({
       } catch (priceErr) {
         console.warn('[AdminApp] Non-fatal pricing update warning:', priceErr);
       }
+
+      if (formData.assignedTeacherId) {
+        try {
+          await dataService.assignTeacher(formData.assignedTeacherId, editingCourse.id, undefined, currentUser.id);
+        } catch (assignErr) {
+          console.warn('[AdminApp] Non-fatal teacher assignment warning:', assignErr);
+        }
+      }
     } else {
       // Create new
       const courseSlug = formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'course';
@@ -224,6 +233,14 @@ export const AdminApp: React.FC<AdminAppProps> = ({
           });
         } catch (priceErr) {
           console.warn('[AdminApp] Non-fatal pricing save warning for new course:', priceErr);
+        }
+
+        if (formData.assignedTeacherId) {
+          try {
+            await dataService.assignTeacher(formData.assignedTeacherId, newCourse.id, undefined, currentUser.id);
+          } catch (assignErr) {
+            console.warn('[AdminApp] Non-fatal teacher assignment warning for new course:', assignErr);
+          }
         }
       }
     }
@@ -428,6 +445,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({
           <AdminCourseForm
             initialCourse={editingCourse}
             categories={categories}
+            teachers={teachers}
             onBack={() => {
               setIsCreatingCourse(false);
               setEditingCourse(null);
@@ -477,6 +495,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({
             {activeTab === 'courses' && (
               <AdminCourses
                 courses={courses}
+                teachers={teachers}
+                assignments={teacherAssignments}
+                schedules={schedules}
                 onCreateCourse={() => {
                   setEditingCourse(null);
                   setIsCreatingCourse(true);
@@ -490,6 +511,9 @@ export const AdminApp: React.FC<AdminAppProps> = ({
                 }}
                 onToggleStatus={handleToggleCourseStatus}
                 onDeleteCourse={handleDeleteCourse}
+                onAssignTeacher={handleAssignTeacher}
+                onRemoveAssignment={handleRemoveTeacherAssignment}
+                onGoToTeachers={() => setActiveTab('instructors')}
               />
             )}
 

@@ -3,11 +3,13 @@ import {
   ArrowLeft, UploadCloud, Info, Check, Plus, Trash2,
   Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, X, Clock, BarChart2 
 } from 'lucide-react';
-import { Course, CourseCategory } from '../../types';
+import { Course, CourseCategory, Profile } from '../../types';
+import { formatCapitalizedName } from '../../utils/nameFormatter';
 
 interface AdminCourseFormProps {
   initialCourse?: Course | null;
   categories: CourseCategory[];
+  teachers?: Profile[];
   onBack: () => void;
   onSubmit: (formData: {
     title: string;
@@ -25,6 +27,7 @@ interface AdminCourseFormProps {
     eur_price: number;
     heroFile: File | null;
     removeImage: boolean;
+    assignedTeacherId?: string;
   }) => Promise<void>;
   onCreateCategoryInline?: (name: string) => Promise<CourseCategory>;
 }
@@ -32,6 +35,7 @@ interface AdminCourseFormProps {
 export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
   initialCourse,
   categories,
+  teachers = [],
   onBack,
   onSubmit,
   onCreateCategoryInline
@@ -99,6 +103,7 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroPreview, setHeroPreview] = useState<string>(initialCourse?.image_url || '');
   const [removeImage, setRemoveImage] = useState(false);
+  const [assignedTeacherId, setAssignedTeacherId] = useState<string>('');
 
   // Inline Category modal
   const [showNewCatInput, setShowNewCatInput] = useState(false);
@@ -171,7 +176,8 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
         ngn_price: Number(ngnPrice || 0),
         eur_price: Number(eurPrice || 0),
         heroFile,
-        removeImage
+        removeImage,
+        assignedTeacherId: assignedTeacherId || undefined
       });
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save course');
@@ -587,6 +593,30 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
               </div>
             </div>
 
+            {/* Assign Teacher (Optional) */}
+            {teachers.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  Assign Teacher (Optional)
+                </label>
+                <select
+                  value={assignedTeacherId}
+                  onChange={(e) => setAssignedTeacherId(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#0A9D8F] transition-all"
+                >
+                  <option value="">-- Assign Later --</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {formatCapitalizedName(t.full_name || t.email, 'Instructor')} ({t.email})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Assigned teachers can complete course details, class schedules, and publish the course to students.
+                </p>
+              </div>
+            )}
+
             {/* Course Status Segmented Control */}
             <div>
               <label className="block text-xs font-bold text-gray-800 mb-2">
@@ -612,6 +642,9 @@ export const AdminCourseForm: React.FC<AdminCourseFormProps> = ({
                   );
                 })}
               </div>
+              <p className="text-[11px] text-gray-500 mt-1.5">
+                Keep as <strong>Draft</strong> if you want the assigned teacher to enter course info before making it visible to students.
+              </p>
             </div>
 
             {/* Action buttons */}

@@ -298,7 +298,7 @@ export const AdminTeachers: React.FC<AdminTeachersProps> = ({
                         }}
                         className="flex items-center gap-1 text-xs font-bold text-[#0A9D8F] hover:text-[#0A9D8F]/80 cursor-pointer"
                       >
-                        <span>Manage Classes</span>
+                        <span>Assign Course</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
