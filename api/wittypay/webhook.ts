@@ -1,6 +1,13 @@
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
+// Disable automatic body parsing on Vercel so we can verify the exact raw webhook payload bytes
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -15,28 +22,104 @@ function getSupabaseAdmin() {
 }
 
 /**
- * Verifies the incoming Wittypay webhook signature using HMAC SHA-256
+ * Safely reads the raw HTTP request body for both Express (server.ts) and Vercel Serverless Functions.
  */
-function verifyWittypaySignature(rawBody: string, signatureHeader?: string, secretKey?: string): boolean {
-  if (!secretKey) {
+async function readWebhookRawBody(req: any): Promise<{ rawBody: string; fromStream: boolean }> {
+  if (typeof req.rawBody === 'string') {
+    return { rawBody: req.rawBody, fromStream: true };
+  }
+  if (Buffer.isBuffer(req.rawBody)) {
+    return { rawBody: req.rawBody.toString('utf8'), fromStream: true };
+  }
+
+  // Read directly from Node IncomingMessage stream before touching req.body (Vercel lazy body getter)
+  if (req && !req.readableEnded && typeof req.on === 'function') {
+    const streamBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk: Buffer | string) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, 'utf8'));
+      });
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', (err: Error) => reject(err));
+    }).catch(() => Buffer.alloc(0));
+
+    if (streamBuffer.length > 0) {
+      return { rawBody: streamBuffer.toString('utf8'), fromStream: true };
+    }
+  }
+
+  // Fallbacks if another middleware/runtime already consumed the stream
+  if (Buffer.isBuffer(req.body)) {
+    return { rawBody: req.body.toString('utf8'), fromStream: true };
+  }
+  if (typeof req.body === 'string') {
+    return { rawBody: req.body, fromStream: true };
+  }
+  if (req.body && typeof req.body === 'object') {
+    return { rawBody: JSON.stringify(req.body), fromStream: false };
+  }
+  return { rawBody: '', fromStream: false };
+}
+
+/**
+ * Timing-safe hex digest comparison without throwing ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH
+ */
+function safeHexCompare(computedHex: string, receivedHex: string): boolean {
+  const expectedBuf = Buffer.from(computedHex.toLowerCase(), 'utf8');
+  const receivedBuf = Buffer.from(receivedHex.toLowerCase(), 'utf8');
+  if (expectedBuf.length === 0 || expectedBuf.length !== receivedBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expectedBuf, receivedBuf);
+}
+
+/**
+ * Verifies the incoming Wittypay webhook signature per https://wittypay.co/docs.php
+ * Header: X-Wittypay-Signature: sha512=<hex_hmac>
+ */
+function verifyWittypaySignature(
+  rawBody: string,
+  signatureHeader: string | undefined,
+  secretKeys: string[],
+  fromStream: boolean
+): boolean {
+  if (secretKeys.length === 0) {
     console.warn('[Wittypay Webhook] WITTYPAY_SECRET_KEY not set on server.');
     return false;
   }
 
-  if (!signatureHeader) {
+  if (!signatureHeader || typeof signatureHeader !== 'string') {
     return false;
   }
 
   try {
-    const computedSignature = crypto
-      .createHmac('sha256', secretKey)
-      .update(rawBody)
-      .digest('hex');
+    const trimmedHeader = signatureHeader.trim();
+    const isSha256 = /^sha256=/i.test(trimmedHeader) || (!/^sha512=/i.test(trimmedHeader) && trimmedHeader.length === 64);
+    const algorithm = isSha256 ? 'sha256' : 'sha512';
+    const cleanReceivedHex = trimmedHeader.replace(/^(sha512|sha256)=/i, '').trim();
 
-    return crypto.timingSafeEqual(
-      Buffer.from(computedSignature, 'utf8'),
-      Buffer.from(signatureHeader, 'utf8')
-    );
+    if (!cleanReceivedHex) {
+      return false;
+    }
+
+    const candidateBodies = fromStream
+      ? [rawBody]
+      : [rawBody, rawBody.replace(/\//g, '\\/')];
+
+    for (const secret of secretKeys) {
+      for (const bodyVariant of candidateBodies) {
+        const computedSignature = crypto
+          .createHmac(algorithm, secret)
+          .update(bodyVariant, 'utf8')
+          .digest('hex');
+
+        if (safeHexCompare(computedSignature, cleanReceivedHex)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   } catch (err) {
     console.error('[Wittypay Webhook] Signature verification error:', err);
     return false;
@@ -49,24 +132,46 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const signatureHeader = req.headers['x-signature-sha256'] || req.headers['x-wittypay-signature'] || req.headers['x-signature'];
+    const rawSignatureHeader =
+      req.headers['x-wittypay-signature'] ||
+      req.headers['x-signature-sha512'] ||
+      req.headers['x-signature-sha256'] ||
+      req.headers['x-signature'];
+    const signatureHeader = Array.isArray(rawSignatureHeader)
+      ? rawSignatureHeader[0]
+      : rawSignatureHeader;
+
     const secretKey = process.env.WITTYPAY_SECRET_KEY;
-    const rawBody = typeof req.rawBody === 'string' 
-      ? req.rawBody 
-      : (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    const webhookSecret = process.env.WITTYPAY_WEBHOOK_SECRET;
+    const secretKeys = Array.from(new Set([webhookSecret, secretKey].filter((s): s is string => Boolean(s && s.trim()))));
+
+    const { rawBody, fromStream } = await readWebhookRawBody(req);
 
     // 1. Signature Verification
-    if (secretKey) {
-      const isValid = verifyWittypaySignature(rawBody, signatureHeader as string, secretKey);
+    if (secretKeys.length > 0) {
+      const isValid = verifyWittypaySignature(rawBody, signatureHeader, secretKeys, fromStream);
       if (!isValid) {
-        console.error('[Wittypay Webhook] Invalid signature rejected.');
+        console.error('[Wittypay Webhook] Invalid signature rejected.', {
+          has_signature_header: Boolean(signatureHeader),
+          signature_prefix: typeof signatureHeader === 'string' ? signatureHeader.slice(0, 10) : null,
+          signature_length: typeof signatureHeader === 'string' ? signatureHeader.length : 0,
+          raw_body_from_stream: fromStream,
+          raw_body_length: rawBody.length
+        });
         return res.status(401).json({ error: 'Invalid webhook signature.' });
       }
     } else {
       console.warn('[Wittypay Webhook] Warning: WITTYPAY_SECRET_KEY is not configured on server.');
     }
 
-    const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    let payload: any = {};
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : (typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {}));
+    } catch (parseErr) {
+      console.error('[Wittypay Webhook] Failed to parse JSON webhook body.');
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
     const event = payload.event || payload.type || 'payment.success';
     const data = payload.data || payload;
 
@@ -163,20 +268,21 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Amount verification failed' });
     }
 
-    const reportedStatus = (
-      verifiedGatewayData?.data?.status || 
-      verifiedGatewayData?.status || 
-      data.status || 
-      payload.status || 
-      ''
-    ).toLowerCase();
+    const gatewayPaymentObj = verifiedGatewayData?.data || (verifiedGatewayData?.reference ? verifiedGatewayData : null);
+    const gatewayPaymentStatus = (gatewayPaymentObj?.status || '').toLowerCase();
+    const payloadStatus = (data?.status || payload?.status || '').toLowerCase();
+    const reportedStatus = gatewayPaymentStatus || payloadStatus;
 
-    const isSuccessful = 
+    const isFailedEvent = event === 'payment.failed' || event === 'charge.failed';
+    const isFailedStatus = reportedStatus === 'failed' || reportedStatus === 'cancelled';
+
+    const isSuccessful = !isFailedEvent && !isFailedStatus && (
       reportedStatus === 'success' || 
       reportedStatus === 'completed' || 
       reportedStatus === 'paid' || 
       event === 'charge.success' || 
-      event === 'payment.success';
+      event === 'payment.success'
+    );
 
     const now = new Date().toISOString();
 
@@ -257,7 +363,7 @@ export default async function handler(req: any, res: any) {
       console.info(`[Wittypay Webhook] Verified and fulfilled Order ${order.id} for Student ${order.student_id}`);
       return res.status(200).json({ success: true, fulfilled: true, order_id: order.id });
 
-    } else if (reportedStatus === 'failed' || reportedStatus === 'cancelled') {
+    } else if (isFailedEvent || isFailedStatus) {
       await supabase
         .from('orders')
         .update({
