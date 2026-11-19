@@ -238,7 +238,7 @@ export default async function handler(req: any, res: any) {
     // 8. Prepare host and redirect URLs
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'www.ingeniumtechacademy.com';
     const proto = req.headers['x-forwarded-proto'] || (String(host).includes('localhost') ? 'http' : 'https');
-    const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+    const baseUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/+$/, '');
     const returnUrl = `${baseUrl}/payment/return?order_id=${encodeURIComponent(newOrder.id)}&gateway=paypal&ref=${encodeURIComponent(paymentReference)}`;
     const cancelUrl = `${baseUrl}/payment/return?order_id=${encodeURIComponent(newOrder.id)}&gateway=paypal&status=cancelled&ref=${encodeURIComponent(paymentReference)}`;
 

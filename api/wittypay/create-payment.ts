@@ -146,7 +146,7 @@ export default async function handler(req: any, res: any) {
     // 6. Prepare real callback URL pointing to Ingenium payment return route
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'www.ingeniumtechacademy.com';
     const proto = req.headers['x-forwarded-proto'] || (String(host).includes('localhost') ? 'http' : 'https');
-    const baseUrl = process.env.APP_URL || `${proto}://${host}`;
+    const baseUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/+$/, '');
     const callbackUrl = `${baseUrl}/payment/callback?order_id=${encodeURIComponent(newOrder.id)}&ref=${encodeURIComponent(paymentReference)}`;
 
     // 7. Call the REAL Wittypay API: POST https://wittypay.co/api/merchant/v1/payments
